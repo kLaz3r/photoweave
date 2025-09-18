@@ -1,6 +1,22 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Righteous&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-body: var(--font-bricolage-grotesque), sans-serif;
+  --font-display: var(--font-righteous), sans-serif;
+
+  --color-illustration-dark: oklch(24.93% 0.0685 30.65deg);
+  --color-primary: oklch(58.71% 0.186 30.95deg);
+  --color-secondary: oklch(83.52% 0.0843 64.49deg);
+  --color-accent: oklch(55.2% 0.2163 279.61deg);
+  --color-text: oklch(13.95% 0.0289 34.11deg);
+  --color-background: oklch(98.13% 0.0077 27.43deg);
+  --gradient-accent-to-primary: var(
+    --color-primary,
+    linear-gradient(
+      180deg,
+      var(--color-accent, #6056eb) 0%,
+      var(--color-primary, #d4422e) 100%
+    )
+  );
 }

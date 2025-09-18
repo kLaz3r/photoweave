@@ -1,7 +1,7 @@
 import "~/styles/globals.css";
 
 import { type Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Bricolage_Grotesque, Righteous } from "next/font/google";
 
 export const metadata: Metadata = {
   title: "Create T3 App",
@@ -9,16 +9,21 @@ export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-const geist = Geist({
+const righteous = Righteous({
   subsets: ["latin"],
-  variable: "--font-geist-sans",
+  variable: "--font-righteous",
+  weight: ["400"],
+});
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-bricolage-grotesque",
 });
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geist.variable}`}>
+    <html lang="en" className={`${bricolage.variable}`}>
       <body>{children}</body>
     </html>
   );
