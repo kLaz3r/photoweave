@@ -1,22 +1,50 @@
 @import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Righteous&display=swap");
 @import "tailwindcss";
 
-@theme {
+:root {
   --font-body: var(--font-bricolage-grotesque), sans-serif;
   --font-display: var(--font-righteous), sans-serif;
 
+  /* Light theme colors */
   --color-illustration-dark: oklch(24.93% 0.0685 30.65deg);
   --color-primary: oklch(58.71% 0.186 30.95deg);
   --color-secondary: oklch(83.52% 0.0843 64.49deg);
   --color-accent: oklch(55.2% 0.2163 279.61deg);
   --color-text: oklch(13.95% 0.0289 34.11deg);
   --color-background: oklch(98.13% 0.0077 27.43deg);
-  --gradient-accent-to-primary: var(
-    --color-primary,
-    linear-gradient(
-      180deg,
-      var(--color-accent, #6056eb) 0%,
-      var(--color-primary, #d4422e) 100%
-    )
+  --gradient-accent-to-primary: linear-gradient(
+    180deg,
+    var(--color-accent) 0%,
+    var(--color-primary) 100%
   );
+}
+
+[data-theme="dark"] {
+  /* Dark theme colors */
+  --color-illustration-dark: oklch(40% 0.08 30.65deg);
+  --color-primary: oklch(68% 0.2 30.95deg);
+  --color-secondary: oklch(88% 0.1 64.49deg);
+  --color-accent: oklch(65% 0.25 279.61deg);
+  --color-text: oklch(92% 0.01 34.11deg);
+  --color-background: oklch(8% 0.005 27.43deg);
+  --gradient-accent-to-primary: linear-gradient(
+    180deg,
+    var(--color-accent) 0%,
+    var(--color-primary) 100%
+  );
+}
+
+@layer utilities {
+  .bg-background {
+    background-color: var(--color-background);
+  }
+  .text-text {
+    color: var(--color-text);
+  }
+  .border-accent {
+    border-color: var(--color-accent);
+  }
+  .bg-secondary {
+    background-color: var(--color-secondary);
+  }
 }

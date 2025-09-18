@@ -1,5 +1,7 @@
 import "~/styles/globals.css";
 
+import ThemeToggle from "~/components/ThemeToggle";
+
 import { type Metadata } from "next";
 import { Bricolage_Grotesque, Righteous } from "next/font/google";
 
@@ -24,7 +26,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${bricolage.variable}`}>
-      <body>{children}</body>
+      <body>
+        <ThemeToggle />
+        {children}
+      </body>
     </html>
   );
 }
