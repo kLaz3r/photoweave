@@ -1,67 +1,72 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-type Theme = "light" | "dark";
+export type Theme = "light" | "dark";
 
 interface ThemeState {
   theme: Theme;
-  systemTheme: Theme;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
-  initTheme: () => void;
+  initialize: () => void;
+}
+
+const STORAGE_KEY = "theme";
+
+function applyThemeToDocument(theme: Theme) {
+  if (typeof document === "undefined") return;
+  document.documentElement.setAttribute("data-theme", theme);
 }
 
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
       theme: "light",
-      systemTheme: "light",
       setTheme: (theme: Theme) => {
         set({ theme });
-        // Update HTML data-theme attribute
-        if (typeof window !== "undefined") {
-          document.documentElement.setAttribute("data-theme", theme);
-        }
+        applyThemeToDocument(theme);
       },
       toggleTheme: () => {
-        const currentTheme = get().theme;
-        const newTheme = currentTheme === "light" ? "dark" : "light";
-        get().setTheme(newTheme);
+        const current = get().theme;
+        const next = current === "light" ? "dark" : "light";
+        get().setTheme(next);
       },
-      initTheme: () => {
+      initialize: () => {
         if (typeof window === "undefined") return;
 
-        const savedTheme = localStorage.getItem("theme") as Theme | null;
-        const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
+        const saved =
+          (window.localStorage.getItem(STORAGE_KEY) as Theme | null) ?? null;
+        const system: Theme = window.matchMedia("(prefers-color-scheme: dark)")
           .matches
           ? "dark"
           : "light";
+        const initial = saved ?? system;
+        set({ theme: initial });
+        applyThemeToDocument(initial);
 
-        const initialTheme = savedTheme ?? systemTheme;
-        set({ theme: initialTheme, systemTheme });
-
-        // Set initial HTML attribute
-        document.documentElement.setAttribute("data-theme", initialTheme);
-
-        // Listen for system theme changes
-        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-        const handleChange = (e: MediaQueryListEvent) => {
-          set({ systemTheme: e.matches ? "dark" : "light" });
-          // If no saved theme, follow system
-          if (!savedTheme) {
-            get().setTheme(e.matches ? "dark" : "light");
+        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+        const onChange = (e: MediaQueryListEvent) => {
+          const hasSaved = Boolean(window.localStorage.getItem(STORAGE_KEY));
+          if (!hasSaved) {
+            const sysTheme: Theme = e.matches ? "dark" : "light";
+            get().setTheme(sysTheme);
           }
         };
-        mediaQuery.addEventListener("change", handleChange);
-
-        // Cleanup is handled by React, but we can return a cleanup function
-        return () => mediaQuery.removeEventListener("change", handleChange);
+        mq.addEventListener("change", onChange);
       },
     }),
     {
-      name: "theme-storage",
+      name: STORAGE_KEY,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ theme: state.theme }),
     },
   ),
 );
+
+export function initializeTheme(): void {
+  // Delegate to the store's initialize to keep logic in one place
+  try {
+    useThemeStore.getState().initialize();
+  } catch {
+    // no-op on server or if store not ready
+  }
+}

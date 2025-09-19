@@ -2,49 +2,42 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
+  /* Theme base variables (runtime-overridable) */
+  --theme-illustration-dark: oklch(24.93% 0.0685 30.65deg);
+  --theme-primary: oklch(58.71% 0.186 30.95deg);
+  --theme-secondary: oklch(83.52% 0.0843 64.49deg);
+  --theme-accent: oklch(55.2% 0.2163 279.61deg);
+  --theme-text: oklch(13.95% 0.0289 34.11deg);
+  --theme-background: oklch(98.13% 0.0077 27.43deg);
+}
+
+/* Map Tailwind tokens to theme variables once (do not scope per selector) */
+@theme inline {
   --font-body: var(--font-bricolage-grotesque), sans-serif;
   --font-display: var(--font-righteous), sans-serif;
 
-  /* Light theme colors */
-  --color-illustration-dark: oklch(24.93% 0.0685 30.65deg);
-  --color-primary: oklch(58.71% 0.186 30.95deg);
-  --color-secondary: oklch(83.52% 0.0843 64.49deg);
-  --color-accent: oklch(55.2% 0.2163 279.61deg);
-  --color-text: oklch(13.95% 0.0289 34.11deg);
-  --color-background: oklch(98.13% 0.0077 27.43deg);
+  --color-illustration-dark: var(--theme-illustration-dark);
+  --color-primary: var(--theme-primary);
+  --color-secondary: var(--theme-secondary);
+  --color-accent: var(--theme-accent);
+  --color-text: var(--theme-text);
+  --color-background: var(--theme-background);
   --gradient-accent-to-primary: linear-gradient(
     180deg,
-    var(--color-accent) 0%,
-    var(--color-primary) 100%
+    var(--theme-accent) 0%,
+    var(--theme-primary) 100%
   );
 }
 
 [data-theme="dark"] {
-  /* Dark theme colors */
-  --color-illustration-dark: oklch(40% 0.08 30.65deg);
-  --color-primary: oklch(68% 0.2 30.95deg);
-  --color-secondary: oklch(88% 0.1 64.49deg);
-  --color-accent: oklch(65% 0.25 279.61deg);
-  --color-text: oklch(92% 0.01 34.11deg);
-  --color-background: oklch(8% 0.005 27.43deg);
-  --gradient-accent-to-primary: linear-gradient(
-    180deg,
-    var(--color-accent) 0%,
-    var(--color-primary) 100%
-  );
-}
-
-@layer utilities {
-  .bg-background {
-    background-color: var(--color-background);
-  }
-  .text-text {
-    color: var(--color-text);
-  }
-  .border-accent {
-    border-color: var(--color-accent);
-  }
-  .bg-secondary {
-    background-color: var(--color-secondary);
-  }
+  color-scheme: dark;
+  /* Only override the runtime variables */
+  --theme-text: oklch(92% 0.01 34.11deg);
+  --theme-background: oklch(8% 0.005 27.43deg);
+  /* Dark variants for brand accents */
+  --theme-primary: oklch(68% 0.2 30.95deg);
+  --theme-secondary: oklch(88% 0.1 64.49deg);
+  --theme-accent: oklch(65% 0.25 279.61deg);
+  /* Keep primary/secondary/accent same; add dark variants here if desired */
 }

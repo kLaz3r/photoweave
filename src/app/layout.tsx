@@ -1,6 +1,6 @@
 import "~/styles/globals.css";
 
-import ThemeToggle from "~/components/ThemeToggle";
+import Navbar from "~/components/Navbar";
 
 import { type Metadata } from "next";
 import { Bricolage_Grotesque, Righteous } from "next/font/google";
@@ -25,9 +25,13 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${bricolage.variable}`}>
-      <body>
-        <ThemeToggle />
+    <html
+      lang="en"
+      className={`${bricolage.variable} ${righteous.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="font-body">
+        <Navbar />
         {children}
       </body>
     </html>
