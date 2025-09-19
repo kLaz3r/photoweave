@@ -24,7 +24,7 @@
   --color-text: var(--theme-text);
   --color-background: var(--theme-background);
   --gradient-accent-to-primary: linear-gradient(
-    180deg,
+    90deg,
     var(--theme-accent) 0%,
     var(--theme-primary) 100%
   );
@@ -40,4 +40,12 @@
   --theme-secondary: oklch(88% 0.1 64.49deg);
   --theme-accent: oklch(65% 0.25 279.61deg);
   /* Keep primary/secondary/accent same; add dark variants here if desired */
+}
+
+@utility text-gradient {
+  background: var(--gradient-accent-to-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
 }

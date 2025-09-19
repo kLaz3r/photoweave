@@ -30,7 +30,7 @@ export default function Navbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="bg-background text-text">
+    <nav className="bg-background text-text fixed top-0 right-0 left-0 z-50">
       <div className="container mx-auto flex items-center justify-between py-4">
         <Link href="/" className="inline-flex items-center">
           <Image
@@ -43,7 +43,7 @@ export default function Navbar() {
         </Link>
 
         <div className="flex items-center gap-8">
-          <ul className="font-display flex items-center gap-12 text-2xl">
+          <ul className="font-display flex items-center gap-12 text-3xl">
             {navItems.map((item) => {
               const active = item.isActive(pathname ?? "/");
               return (

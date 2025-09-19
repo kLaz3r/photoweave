@@ -1,36 +1,43 @@
-import Link from "next/link";
+import Image from "next/image";
+
+const HeroSection = () => {
+  return (
+    <div className="mt-[100px] flex h-[calc(100vh-100px)] flex-row items-center justify-between">
+      <div className="flex w-1/2 flex-col gap-6">
+        <h1 className="font-display text-8xl font-bold">
+          Turn your photo chaos into{" "}
+          <span className="text-gradient">COLLAGE</span> magic.
+        </h1>
+        <p className="text-2xl">
+          PhotoWeave intelligently arranges your best memories into a stunning
+          collage, automatically. No fuss, just fun.
+        </p>
+        <div className="flex flex-row gap-4">
+          <button className="bg-accent rounded-full px-8 py-4 text-2xl font-bold text-white">
+            Start Weaving!
+          </button>
+          <p className="text-lg">
+            Join 10,000+ happy creators <br /> who&apos;ve woven their stories!
+          </p>
+        </div>
+      </div>
+      <div>
+        <Image
+          src="/hero-photo.png"
+          alt="Hero image"
+          width={600}
+          height={600}
+        />
+      </div>
+    </div>
+  );
+};
 
 export default function HomePage() {
   return (
     <main className="bg-background text-text flex min-h-screen flex-col items-center justify-center">
-      <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
-        <h1 className="text-text text-5xl font-extrabold tracking-tight sm:text-[5rem]">
-          Create <span className="text-accent">T3</span> App
-        </h1>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
-          <Link
-            className="bg-secondary/10 hover:bg-secondary/20 text-text flex max-w-xs flex-col gap-4 rounded-xl p-4"
-            href="https://create.t3.gg/en/usage/first-steps"
-            target="_blank"
-          >
-            <h3 className="text-2xl font-bold">First Steps →</h3>
-            <div className="text-lg">
-              Just the basics - Everything you need to know to set up your
-              database and authentication.
-            </div>
-          </Link>
-          <Link
-            className="bg-secondary/10 hover:bg-secondary/20 text-text flex max-w-xs flex-col gap-4 rounded-xl p-4"
-            href="https://create.t3.gg/en/introduction"
-            target="_blank"
-          >
-            <h3 className="text-2xl font-bold">Documentation →</h3>
-            <div className="text-lg">
-              Learn more about Create T3 App, the libraries it uses, and how to
-              deploy it.
-            </div>
-          </Link>
-        </div>
+      <div className="container flex flex-col items-center justify-center gap-12 px-4">
+        <HeroSection />
       </div>
     </main>
   );
