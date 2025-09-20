@@ -247,8 +247,6 @@ const TestimonialsSection = () => {
   );
 };
 
-const 
-
 const FAQSection = () => {
   return (
     <div className="py-24">
@@ -332,7 +330,31 @@ export default function HomePage() {
         <PhoneSection />
         <TestimonialsSection />
         <FAQSection />
+        <FinalCTASection />
       </div>
     </main>
   );
 }
+
+const FinalCTASection = () => {
+  return (
+    <div className="py-28">
+      <div className="container mx-auto flex flex-col items-center justify-center gap-6 text-center">
+        <p className="text-lg opacity-80 md:text-xl">
+          You pick the pics. We do the magic.
+        </p>
+        <h2 className="font-display text-5xl leading-tight font-bold md:text-7xl">
+          Ready to weave your
+          <br />
+          <span className="text-gradient">own story?</span>
+        </h2>
+        <button
+          type="button"
+          className="bg-accent rounded-full px-10 py-5 text-2xl font-bold text-white shadow-lg transition-colors hover:opacity-90"
+        >
+          Start Weaving!
+        </button>
+      </div>
+    </div>
+  );
+};
