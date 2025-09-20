@@ -40,6 +40,7 @@
   --theme-secondary: oklch(88% 0.1 64.49deg);
   --theme-accent: oklch(75% 0.25 279.61deg);
   /* Keep primary/secondary/accent same; add dark variants here if desired */
+  --theme-illustration-dark: oklch(25.93% 0.0685 30.65deg);
 }
 
 @utility text-gradient {
