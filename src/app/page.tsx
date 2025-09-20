@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { PiUserFill } from "react-icons/pi";
 import HeroBackground from "~/components/HeroBackground";
 import {
   CollageIllustration,
@@ -170,6 +171,76 @@ const PhoneSection = () => {
   );
 };
 
+type Testimonial = {
+  quote: string;
+  name: string;
+  role: string;
+};
+
+const testimonials: Testimonial[] = [
+  {
+    quote:
+      "I finally found a way to share our family vacation photos without sending 50 separate pictures! It took me two minutes. A lifesaver!",
+    name: "Maria P.",
+    role: "Mom & Weekend Adventurer",
+  },
+  {
+    quote:
+      "I used to spend hours in complicated apps. PhotoWeave just gets it. The automatic layouts are surprisingly brilliant. My travel pics have never looked better.",
+    name: "Alex J.",
+    role: "World Traveler",
+  },
+  {
+    quote:
+      "Made a collage for my friend's birthday and it looked SO good. Everyone asked what app I used. Super easy and fun, 10/10 would recommend.",
+    name: "Chloe T.",
+    role: "Student",
+  },
+];
+
+const TestimonialsSection = () => {
+  return (
+    <div className="py-24">
+      <div className="container mx-auto">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-12 xl:gap-16">
+          {testimonials.map((t) => (
+            <div
+              key={t.name}
+              className="rounded-3xl p-[2px]"
+              style={{
+                background:
+                  "linear-gradient(180deg, var(--theme-accent), var(--theme-primary))",
+              }}
+            >
+              <div className="bg-background flex h-full flex-col justify-between rounded-3xl p-8 md:p-10">
+                <p className="text-lg leading-relaxed md:text-xl">
+                  “{t.quote}”
+                </p>
+                <div className="mt-10 flex items-center gap-4">
+                  <div className="bg-primary flex h-14 w-14 items-center justify-center rounded-full">
+                    <PiUserFill
+                      className="text-[var(--theme-illustration-dark)]"
+                      size={28}
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-display text-2xl font-bold">
+                      {t.name}
+                    </span>
+                    <span className="text-sm opacity-80 md:text-base">
+                      {t.role}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function HomePage() {
   return (
     <main className="bg-background text-text relative flex min-h-screen flex-col items-center justify-center">
@@ -178,6 +249,7 @@ export default function HomePage() {
         <FeaturesSection />
         <FrameSection />
         <PhoneSection />
+        <TestimonialsSection />
       </div>
     </main>
   );
