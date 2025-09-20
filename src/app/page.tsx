@@ -108,12 +108,12 @@ const FrameSection = () => {
             Bring your whole holiday adventure into a <br />{" "}
             <span className="text-gradient">single, beautiful</span> frame.
           </h2>
-          <p className="text-lg md:text-xl">
+          <p className="text-xl md:text-2xl">
             Don&apos;t let your favorite moments get lost in your camera roll.
             Tell the whole story at a glance and relive the fun over and over
             again.
           </p>
-          <ul className="list-disc space-y-3 pl-6 text-lg">
+          <ul className="list-disc space-y-3 pl-6 text-xl">
             <li>Showcase every highlight, from beach days to city nights</li>
             <li>Combine photos from multiple phones into one epic story</li>
             <li>
@@ -135,13 +135,49 @@ const FrameSection = () => {
   );
 };
 
+const PhoneSection = () => {
+  return (
+    <div className="py-24">
+      <div className="container mx-auto grid grid-cols-1 items-center gap-12 md:grid-cols-2">
+        <div className="flex items-center justify-center self-center">
+          <Image
+            src="/phone.png"
+            alt="Phone collage preview"
+            width={520}
+            height={520}
+          />
+        </div>
+
+        <div className="flex flex-col gap-6">
+          <h2 className="font-display text-5xl leading-tight font-bold md:text-6xl">
+            Your camera roll’s new
+            <br />
+            <span className="text-gradient">best friend.</span>
+          </h2>
+          <p className="text-xl md:text-2xl">
+            PhotoWeave transforms that endless scroll of pictures into a
+            collection of cherished memories you&apos;ll actually want to look
+            at, share, and print.
+          </p>
+          <ul className="list-disc space-y-3 pl-6 text-xl">
+            <li>Go from hundreds of pics to one masterpiece</li>
+            <li>Rediscover forgotten gems from your gallery</li>
+            <li>Perfect for birthdays, parties, and family events</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function HomePage() {
   return (
     <main className="bg-background text-text relative flex min-h-screen flex-col items-center justify-center">
-      <div className="relative z-10 flex w-full flex-col items-center justify-center gap-12">
+      <div className="relative z-10 flex w-full flex-col items-center justify-center gap-6">
         <HeroSection />
         <FeaturesSection />
         <FrameSection />
+        <PhoneSection />
       </div>
     </main>
   );

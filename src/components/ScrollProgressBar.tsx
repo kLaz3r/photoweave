@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function ScrollProgressBar() {
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const barRef = useRef<HTMLDivElement | null>(null);
+  const targetProgress = useRef(0); // 0..1
+  const currentProgress = useRef(0); // 0..1
+  const rafId = useRef<number | null>(null);
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
@@ -11,8 +14,8 @@ export default function ScrollProgressBar() {
       const scrollTop = window.scrollY;
       const docHeight =
         document.documentElement.scrollHeight - window.innerHeight;
-      const progress = (scrollTop / docHeight) * 100;
-      setScrollProgress(Math.min(100, Math.max(0, progress)));
+      const progress = docHeight > 0 ? scrollTop / docHeight : 0;
+      targetProgress.current = Math.min(1, Math.max(0, progress));
     };
 
     const checkTheme = () => {
@@ -23,6 +26,18 @@ export default function ScrollProgressBar() {
     // Initial calculations
     updateScrollProgress();
     checkTheme();
+
+    // RAF-driven smoothing (lerp)
+    const tick = () => {
+      const smoothing = 0.15; // lower = smoother, higher = snappier
+      currentProgress.current +=
+        (targetProgress.current - currentProgress.current) * smoothing;
+      if (barRef.current) {
+        barRef.current.style.transform = `scaleX(${currentProgress.current})`;
+      }
+      rafId.current = requestAnimationFrame(tick);
+    };
+    rafId.current = requestAnimationFrame(tick);
 
     // Add scroll event listener
     window.addEventListener("scroll", updateScrollProgress, { passive: true });
@@ -38,16 +53,18 @@ export default function ScrollProgressBar() {
     return () => {
       window.removeEventListener("scroll", updateScrollProgress);
       observer.disconnect();
+      if (rafId.current) cancelAnimationFrame(rafId.current);
     };
   }, []);
 
   return (
-    <div className="fixed top-0 left-0 z-50 h-[5px] w-full">
+    <div className="pointer-events-none fixed top-0 left-0 z-[70] h-[5px] w-full">
       <div
-        className={`bg-accent h-full blur-[1px] transition-all duration-150 ease-out ${
+        ref={barRef}
+        className={`bg-accent h-full origin-left transform-gpu blur-[1px] will-change-transform ${
           isDark ? "opacity-30" : "opacity-100"
         }`}
-        style={{ width: `${scrollProgress}%` }}
+        style={{ transform: "scaleX(0)" }}
       />
     </div>
   );
