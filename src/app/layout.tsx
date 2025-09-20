@@ -1,6 +1,7 @@
 import "~/styles/globals.css";
 
 import Navbar from "~/components/Navbar";
+import ScrollProgressBar from "~/components/ScrollProgressBar";
 
 import { type Metadata } from "next";
 import { Bricolage_Grotesque, Righteous } from "next/font/google";
@@ -31,6 +32,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="font-body">
+        <ScrollProgressBar />
         <Navbar />
         {children}
       </body>

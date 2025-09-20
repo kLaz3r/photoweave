@@ -49,3 +49,13 @@
   color: transparent;
   -webkit-text-fill-color: transparent;
 }
+
+/* Hide default scrollbar */
+html {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+html::-webkit-scrollbar {
+  display: none; /* WebKit browsers (Chrome, Safari, Edge) */
+}
