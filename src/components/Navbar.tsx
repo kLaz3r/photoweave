@@ -30,7 +30,7 @@ export default function Navbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="bg-blur text-text fixed top-0 right-0 left-0 z-50">
+    <nav className="text-text bg-background/70 fixed top-0 right-0 left-0 z-50 backdrop-blur-lg">
       <div className="container mx-auto flex items-center justify-between py-4">
         <Link href="/" className="inline-flex items-center">
           <Image

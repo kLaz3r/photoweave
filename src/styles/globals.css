@@ -38,7 +38,7 @@
   /* Dark variants for brand accents */
   --theme-primary: oklch(68% 0.2 30.95deg);
   --theme-secondary: oklch(88% 0.1 64.49deg);
-  --theme-accent: oklch(65% 0.25 279.61deg);
+  --theme-accent: oklch(75% 0.25 279.61deg);
   /* Keep primary/secondary/accent same; add dark variants here if desired */
 }
 

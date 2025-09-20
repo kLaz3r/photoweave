@@ -1,5 +1,10 @@
 import Image from "next/image";
 import HeroBackground from "~/components/HeroBackground";
+import {
+  CreateShareIcon,
+  ScreenToFrameIcon,
+  SmartLayoutsIcon,
+} from "~/components/icons";
 
 const HeroSection = () => {
   return (
@@ -40,8 +45,55 @@ const HeroSection = () => {
 
 const FeaturesSection = () => {
   return (
-    <div className="flex flex-col items-center justify-center gap-12">
-      <h2 className="text-4xl font-bold">Features</h2>
+    <div className="py-20">
+      <div className="container mx-auto">
+        <div className="grid grid-cols-1 gap-16 md:grid-cols-3">
+          {/* Feature 1 */}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-row items-center gap-3">
+              <SmartLayoutsIcon height={40} />
+              <h3 className="font-display text-2xl font-bold text-[var(--theme-accent)]">
+                Instant, Smart Layouts
+              </h3>
+            </div>
+            <p className="text-lg leading-relaxed">
+              Just select your photos and watch as our AI &apos;weaves&apos;
+              them into the perfect layout in seconds. No more dragging,
+              dropping, or resizing!
+            </p>
+          </div>
+
+          {/* Feature 2 */}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-row items-center gap-3">
+              <CreateShareIcon height={40} />
+              <h3 className="font-display text-2xl font-bold text-[var(--theme-accent)]">
+                Create &amp; Share Instantly
+              </h3>
+            </div>
+            <p className="text-lg leading-relaxed">
+              Skip the app stores. PhotoWeave works instantly in your browser on
+              any device, letting you create and share a beautiful collage in
+              just a few clicks.
+            </p>
+          </div>
+
+          {/* Feature 3 */}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-row items-center gap-3">
+              <ScreenToFrameIcon height={40} />
+              <h3 className="font-display text-2xl font-bold text-[var(--theme-accent)]">
+                From Screen to Frame
+              </h3>
+            </div>
+            <p className="text-lg leading-relaxed">
+              Download every collage in stunning high resolution, perfect for
+              anything from a phone screen to a poster on your wall. No blur,
+              just beauty.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
