@@ -1,5 +1,6 @@
 import "~/styles/globals.css";
 
+import Footer from "~/components/Footer";
 import Navbar from "~/components/Navbar";
 import ScrollProgressBar from "~/components/ScrollProgressBar";
 
@@ -35,6 +36,7 @@ export default function RootLayout({
         <ScrollProgressBar />
         <Navbar />
         {children}
+        <Footer />
       </body>
     </html>
   );
