@@ -7,6 +7,12 @@ import {
   ScreenToFrameIcon,
   SmartLayoutsIcon,
 } from "~/components/icons";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "~/components/ui/accordion";
 
 const HeroSection = () => {
   return (
@@ -241,6 +247,81 @@ const TestimonialsSection = () => {
   );
 };
 
+const 
+
+const FAQSection = () => {
+  return (
+    <div className="py-24">
+      <div className="container mx-auto grid grid-cols-1 gap-8 md:grid-cols-2">
+        <div className="flex flex-col gap-4">
+          <h2 className="font-display text-5xl leading-tight font-bold md:text-6xl">
+            Spend less time editing, more time remembering.
+          </h2>
+          <p className="text-xl md:text-2xl">
+            PhotoWeave is the simplest, most cheerful way to gather your
+            memories. Just pick your photos, and our smart tech handles the
+            rest, creating something beautiful you&apos;ll be excited to share.
+          </p>
+        </div>
+
+        <div>
+          <Accordion
+            type="single"
+            collapsible
+            className="divide-y divide-[color:rgba(0,0,0,0.08)] dark:divide-[color:rgba(255,255,255,0.1)]"
+          >
+            <AccordionItem value="q1">
+              <AccordionTrigger className="text-2xl">
+                Is PhotoWeave free to use?
+              </AccordionTrigger>
+              <AccordionContent>
+                Yes. You can create collages for free. Premium export options
+                may be offered later, but the core experience will remain free.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q2">
+              <AccordionTrigger className="text-2xl">
+                How many photos can I add to one collage?
+              </AccordionTrigger>
+              <AccordionContent>
+                Add as many as you like—our smart layout adapts. For best
+                results, we recommend 10–50 photos.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q3">
+              <AccordionTrigger className="text-2xl">
+                Does this work on my phone?
+              </AccordionTrigger>
+              <AccordionContent>
+                Absolutely. PhotoWeave is a web app that works on modern
+                browsers across iOS, Android, and desktop.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q4">
+              <AccordionTrigger className="text-2xl">
+                Can I make adjustments to the final collage?
+              </AccordionTrigger>
+              <AccordionContent>
+                Yes—you can shuffle layouts, swap photos, and fine‑tune the
+                arrangement before exporting.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="q5">
+              <AccordionTrigger className="text-2xl">
+                What happens to my photos? Are they private?
+              </AccordionTrigger>
+              <AccordionContent>
+                Your photos stay private. We only process them to generate your
+                collage and don’t share them with anyone.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function HomePage() {
   return (
     <main className="bg-background text-text relative flex min-h-screen flex-col items-center justify-center">
@@ -250,6 +331,7 @@ export default function HomePage() {
         <FrameSection />
         <PhoneSection />
         <TestimonialsSection />
+        <FAQSection />
       </div>
     </main>
   );
