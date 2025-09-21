@@ -11,7 +11,7 @@ export default function Footer() {
             "linear-gradient(90deg, var(--theme-primary), var(--theme-accent))",
         }}
       />
-      <div className="container mx-auto flex flex-col items-center gap-6 py-8 md:flex-row">
+      <div className="container mx-auto flex flex-col items-center gap-6 py-8 md:flex-row md:justify-between">
         <div className="flex flex-col">
           <span className="font-display text-4xl font-bold">PhotoWeave</span>
           <span className="text-lg opacity-90">Create. Combine. Cherish.</span>
