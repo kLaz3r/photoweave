@@ -18,17 +18,17 @@ const HeroSection = () => {
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center">
       <HeroBackground blur={100} width={960} height={540} opacity={0.2} />
-      <div className="container mt-[100px] flex h-[calc(100vh-100px)] flex-row items-center justify-between">
-        <div className="flex w-1/2 flex-col gap-6">
-          <h1 className="font-display text-8xl font-bold">
+      <div className="container mt-[100px] flex h-[calc(100vh-100px)] flex-col items-center justify-between md:flex-row">
+        <div className="flex w-full flex-col gap-6 md:w-1/2">
+          <h1 className="font-display text-5xl md:text-8xl">
             Turn your photo chaos into{" "}
             <span className="text-gradient">COLLAGE</span> magic.
           </h1>
-          <p className="text-2xl">
+          <p className="text-lg md:text-2xl">
             PhotoWeave intelligently arranges your best memories into a stunning
             collage, automatically. No fuss, just fun.
           </p>
-          <div className="flex flex-row gap-4">
+          <div className="flex flex-col items-center gap-4 md:flex-row">
             <button className="bg-accent rounded-full px-8 py-4 text-2xl font-bold text-white">
               Start Weaving!
             </button>
@@ -40,6 +40,7 @@ const HeroSection = () => {
         </div>
         <div>
           <Image
+            className="w-full md:w-auto"
             src="/hero-photo.png"
             alt="Hero image"
             width={600}
@@ -322,15 +323,15 @@ const FAQSection = () => {
 
 export default function HomePage() {
   return (
-    <main className="bg-background text-text relative flex min-h-screen flex-col items-center justify-center">
-      <div className="relative z-10 flex w-full flex-col items-center justify-center gap-6">
+    <main className="bg-background text-text relative flex min-h-screen w-screen max-w-screen flex-col items-center justify-center">
+      <div className="relative z-10 flex w-screen max-w-screen flex-col items-center justify-center gap-6 px-4">
         <HeroSection />
-        <FeaturesSection />
+        {/* <FeaturesSection />
         <FrameSection />
         <PhoneSection />
         <TestimonialsSection />
         <FAQSection />
-        <FinalCTASection />
+        <FinalCTASection /> */}
       </div>
     </main>
   );

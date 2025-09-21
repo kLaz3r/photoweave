@@ -32,7 +32,7 @@ export default function RootLayout({
       className={`${bricolage.variable} ${righteous.variable}`}
       suppressHydrationWarning
     >
-      <body className="font-body bg-background">
+      <body className="font-body bg-background w-screen max-w-screen overflow-x-clip">
         <ScrollProgressBar />
         <Navbar />
         {children}
