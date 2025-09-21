@@ -29,6 +29,7 @@
     "browser-image-compression": "^2.0.2",
     "drizzle-orm": "^0.41.0",
     "framer-motion": "^12.23.14",
+    "motion": "^12.23.16",
     "next": "^15.2.3",
     "pica": "^9.0.1",
     "postgres": "^3.4.4",

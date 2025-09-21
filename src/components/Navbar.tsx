@@ -1,8 +1,10 @@
 "use client";
 
+import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import ThemeToggle from "~/components/ThemeToggle";
 
 type NavItem = {
@@ -28,10 +30,18 @@ const navItems: NavItem[] = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const closeMenu = useCallback(() => setIsOpen(false), []);
+  const toggleMenu = useCallback(() => setIsOpen((v) => !v), []);
+
+  useEffect(() => {
+    closeMenu();
+  }, [pathname, closeMenu]);
 
   return (
     <nav className="text-text bg-background/70 fixed top-0 right-0 left-0 z-50 backdrop-blur-lg">
-      <div className="container mx-auto flex items-center justify-between py-4">
+      <div className="container mx-auto flex items-center justify-between px-4 py-4 sm:px-6">
         <Link href="/" className="inline-flex items-center">
           <Image
             src="/photoweave-logo.svg"
@@ -42,8 +52,8 @@ export default function Navbar() {
           />
         </Link>
 
-        <div className="flex items-center gap-8">
-          <ul className="font-display flex items-center gap-12 text-3xl">
+        <div className="hidden items-center gap-8 md:flex">
+          <ul className="font-display flex items-center gap-12 text-4xl">
             {navItems.map((item) => {
               const active = item.isActive(pathname ?? "/");
               return (
@@ -66,7 +76,94 @@ export default function Navbar() {
           </ul>
           <ThemeToggle className="font-display text-2xl" size={22} />
         </div>
+
+        <button
+          type="button"
+          onClick={toggleMenu}
+          aria-label={isOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isOpen}
+          aria-controls="mobile-nav"
+          className="inline-flex h-12 w-12 items-center justify-center rounded-md md:hidden"
+        >
+          <span className="sr-only">Menu</span>
+          <motion.span
+            initial={false}
+            className="text-text relative block h-6 w-8"
+          >
+            <motion.span
+              className="absolute top-0 left-0 h-1 w-full rounded bg-current"
+              style={{ originX: 0.5, originY: 0.5 }}
+              animate={isOpen ? { rotate: 45, y: 10 } : { rotate: 0, y: 0 }}
+              transition={{ type: "spring", stiffness: 600, damping: 32 }}
+            />
+            <motion.span
+              className="absolute top-1/2 left-0 h-1 w-full -translate-y-1/2 rounded bg-current"
+              animate={isOpen ? { opacity: 0 } : { opacity: 1 }}
+              transition={{ duration: 0.18 }}
+            />
+            <motion.span
+              className="absolute bottom-0 left-0 h-1 w-full rounded bg-current"
+              style={{ originX: 0.5, originY: 0.5 }}
+              animate={isOpen ? { rotate: -45, y: -10 } : { rotate: 0, y: 0 }}
+              transition={{ type: "spring", stiffness: 600, damping: 32 }}
+            />
+          </motion.span>
+        </button>
       </div>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            id="mobile-nav"
+            key="mobile-dropdown"
+            initial={{ clipPath: "inset(0 0 100% 0)", opacity: 0.6 }}
+            animate={{ clipPath: "inset(0 0 0% 0)", opacity: 1 }}
+            exit={{ clipPath: "inset(0 0 100% 0)", opacity: 0.6 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className="bg-background/95 text-text absolute top-full right-0 left-0 z-[60] border-t border-white/10 shadow-xl md:hidden"
+          >
+            <motion.ul
+              initial="hidden"
+              animate="show"
+              variants={{
+                hidden: { opacity: 0 },
+                show: {
+                  opacity: 1,
+                  transition: { staggerChildren: 0.06, delayChildren: 0.05 },
+                },
+              }}
+              className="font-display flex flex-col items-end gap-6 py-6 pr-4 pl-4 text-right text-[2.5rem] sm:pr-6 sm:pl-6"
+            >
+              {navItems.map((item) => {
+                const active = item.isActive(pathname ?? "/");
+                return (
+                  <motion.li
+                    key={item.href}
+                    variants={{
+                      hidden: { y: -8, opacity: 0 },
+                      show: { y: 0, opacity: 1 },
+                    }}
+                  >
+                    <Link
+                      href={item.href}
+                      onClick={closeMenu}
+                      className={[
+                        "transition-colors",
+                        active
+                          ? "text-primary decoration-primary underline decoration-4 underline-offset-8"
+                          : "hover:text-primary decoration-primary decoration-4 underline-offset-8 hover:underline",
+                      ].join(" ")}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      {item.label}
+                    </Link>
+                  </motion.li>
+                );
+              })}
+            </motion.ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }
