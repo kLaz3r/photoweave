@@ -61,7 +61,7 @@ const FeaturesSection = () => {
           <div className="flex flex-col gap-3">
             <div className="flex flex-row items-center gap-3">
               <SmartLayoutsIcon height={40} />
-              <h3 className="font-display text-2xl font-bold text-[var(--theme-accent)]">
+              <h3 className="font-display text-2xl text-[var(--theme-accent)]">
                 Instant, Smart Layouts
               </h3>
             </div>
@@ -76,7 +76,7 @@ const FeaturesSection = () => {
           <div className="flex flex-col gap-3">
             <div className="flex flex-row items-center gap-3">
               <CreateShareIcon height={40} />
-              <h3 className="font-display text-2xl font-bold text-[var(--theme-accent)]">
+              <h3 className="font-display text-2xl text-[var(--theme-accent)]">
                 Create &amp; Share Instantly
               </h3>
             </div>
@@ -91,7 +91,7 @@ const FeaturesSection = () => {
           <div className="flex flex-col gap-3">
             <div className="flex flex-row items-center gap-3">
               <ScreenToFrameIcon height={40} />
-              <h3 className="font-display text-2xl font-bold text-[var(--theme-accent)]">
+              <h3 className="font-display text-2xl text-[var(--theme-accent)]">
                 From Screen to Frame
               </h3>
             </div>
@@ -112,7 +112,7 @@ const FrameSection = () => {
     <div className="py-24">
       <div className="container mx-auto grid grid-cols-1 items-center gap-12 md:grid-cols-2">
         <div className="flex flex-col gap-6">
-          <h2 className="font-display text-5xl leading-tight font-bold md:text-6xl">
+          <h2 className="font-display text-5xl leading-12 md:text-6xl">
             Bring your whole holiday adventure into a <br />{" "}
             <span className="text-gradient">single, beautiful</span> frame.
           </h2>
@@ -134,7 +134,7 @@ const FrameSection = () => {
         <div className="flex w-full items-center justify-center">
           <CollageIllustration
             className="h-auto"
-            width={700}
+            width={400}
             title="Collage frame illustration"
           />
         </div>
@@ -157,7 +157,7 @@ const PhoneSection = () => {
         </div>
 
         <div className="flex flex-col gap-6">
-          <h2 className="font-display text-5xl leading-tight font-bold md:text-6xl">
+          <h2 className="font-display text-6xl leading-16 md:text-6xl">
             Your camera roll’s new
             <br />
             <span className="text-gradient">best friend.</span>
@@ -213,7 +213,7 @@ const TestimonialsSection = () => {
           {testimonials.map((t) => (
             <div
               key={t.name}
-              className="rounded-3xl p-[2px]"
+              className="rounded-3xl p-[1px] drop-shadow-lg"
               style={{
                 background:
                   "linear-gradient(180deg, var(--theme-accent), var(--theme-primary))",
@@ -253,7 +253,7 @@ const FAQSection = () => {
     <div className="py-24">
       <div className="container mx-auto grid grid-cols-1 gap-8 md:grid-cols-2">
         <div className="flex flex-col gap-4">
-          <h2 className="font-display text-5xl leading-tight font-bold md:text-6xl">
+          <h2 className="font-display text-center text-6xl leading-tight md:text-left md:text-6xl">
             Spend less time editing, more time remembering.
           </h2>
           <p className="text-xl md:text-2xl">
@@ -324,14 +324,14 @@ const FAQSection = () => {
 export default function HomePage() {
   return (
     <main className="bg-background text-text relative flex min-h-screen w-screen max-w-screen flex-col items-center justify-center">
-      <div className="relative z-10 flex w-screen max-w-screen flex-col items-center justify-center gap-6 px-4">
+      <div className="relative z-10 flex w-screen max-w-screen flex-col items-center justify-center px-4">
         <HeroSection />
-        {/* <FeaturesSection />
+        <FeaturesSection />
         <FrameSection />
         <PhoneSection />
         <TestimonialsSection />
         <FAQSection />
-        <FinalCTASection /> */}
+        <FinalCTASection />
       </div>
     </main>
   );
@@ -341,10 +341,10 @@ const FinalCTASection = () => {
   return (
     <div className="py-28">
       <div className="container mx-auto flex flex-col items-center justify-center gap-6 text-center">
-        <p className="text-lg opacity-80 md:text-xl">
-          You pick the pics. We do the magic.
+        <p className="text-2xl opacity-80 md:text-xl">
+          You pick the pics. <br /> We do the magic.
         </p>
-        <h2 className="font-display text-5xl leading-tight font-bold md:text-7xl">
+        <h2 className="font-display text-6xl leading-16 md:text-7xl">
           Ready to weave your
           <br />
           <span className="text-gradient">own story?</span>
