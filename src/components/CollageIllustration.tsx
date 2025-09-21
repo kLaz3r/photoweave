@@ -53,24 +53,35 @@ export default function CollageIllustration({
       for (const [pattern, replacement] of replacements) {
         out = out.replace(pattern, replacement);
       }
-
-      // Ensure the root svg doesn't lock width/height if props provided
-      if (width || height) {
-        // Remove existing width/height attributes on the root <svg>
-        out = out.replace(/(<svg\b[^>]*?)\swidth="[^"]*"/i, "$1");
-        out = out.replace(/(<svg\b[^>]*?)\sheight="[^"]*"/i, "$1");
-      }
-
       return out;
     };
 
-    const setSizeAttributes = (raw: string): string => {
-      if (!width && !height) return raw;
+    const setResponsiveSizing = (raw: string): string => {
       const parser = new DOMParser();
       const doc = parser.parseFromString(raw, "image/svg+xml");
       const svg = doc.documentElement;
-      if (width) svg.setAttribute("width", String(width));
-      if (height) svg.setAttribute("height", String(height));
+
+      // Always remove fixed dimensions from the root <svg>
+      svg.removeAttribute("width");
+      svg.removeAttribute("height");
+
+      if (width || height) {
+        // If explicit dimensions are provided, set them as attributes
+        if (width) svg.setAttribute("width", String(width));
+        if (height) svg.setAttribute("height", String(height));
+        // Do not force responsive style if explicit sizing is used
+      } else {
+        // Make the SVG scale with its container while preserving aspect ratio
+        const existingStyle = svg.getAttribute("style") || "";
+        const responsiveStyle = "width:100%;height:auto;display:block;";
+        const mergedStyle = `${existingStyle} ${responsiveStyle}`.trim();
+        svg.setAttribute("style", mergedStyle);
+        // Ensure preserveAspectRatio is present for proper scaling
+        if (!svg.getAttribute("preserveAspectRatio")) {
+          svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        }
+      }
+
       return svg.outerHTML;
     };
 
@@ -81,7 +92,7 @@ export default function CollageIllustration({
         });
         const raw = await res.text();
         let processed = remapColors(raw);
-        processed = setSizeAttributes(processed);
+        processed = setResponsiveSizing(processed);
         if (isMounted) setSvgHtml(processed);
       } catch {
         // Ignore fetch errors in UI component

@@ -112,7 +112,7 @@ const FrameSection = () => {
     <div className="py-24">
       <div className="container mx-auto grid grid-cols-1 items-center gap-12 md:grid-cols-2">
         <div className="flex flex-col gap-6">
-          <h2 className="font-display text-5xl leading-12 md:text-6xl">
+          <h2 className="font-display text-5xl leading-12 md:text-6xl md:leading-tight">
             Bring your whole holiday adventure into a <br />{" "}
             <span className="text-gradient">single, beautiful</span> frame.
           </h2>
@@ -132,11 +132,12 @@ const FrameSection = () => {
         </div>
 
         <div className="flex w-full items-center justify-center">
-          <CollageIllustration
-            className="h-auto"
-            width={400}
-            title="Collage frame illustration"
-          />
+          <div className="w-full max-w-[350px] md:max-w-[700px]">
+            <CollageIllustration
+              className="h-auto w-full"
+              title="Collage frame illustration"
+            />
+          </div>
         </div>
       </div>
     </div>
