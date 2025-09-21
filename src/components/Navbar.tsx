@@ -41,19 +41,19 @@ export default function Navbar() {
 
   return (
     <nav className="text-text bg-background/70 fixed top-0 right-0 left-0 z-50 backdrop-blur-lg">
-      <div className="container mx-auto flex items-center justify-between px-4 py-4 sm:px-6">
+      <div className="container mx-auto flex items-center justify-between px-4 py-3 sm:px-6">
         <Link href="/" className="inline-flex items-center">
           <Image
             src="/photoweave-logo.svg"
             alt="Photoweave logo"
-            width={75}
-            height={75}
+            width={60}
+            height={60}
             priority
           />
         </Link>
 
-        <div className="hidden items-center gap-8 md:flex">
-          <ul className="font-display flex items-center gap-12 text-4xl">
+        <div className="hidden items-center gap-7 md:flex">
+          <ul className="font-display flex items-center gap-10 text-2xl">
             {navItems.map((item) => {
               const active = item.isActive(pathname ?? "/");
               return (
@@ -74,7 +74,7 @@ export default function Navbar() {
               );
             })}
           </ul>
-          <ThemeToggle className="font-display text-2xl" size={22} />
+          <ThemeToggle className="font-display text-xl" size={20} />
         </div>
 
         <button
@@ -83,7 +83,7 @@ export default function Navbar() {
           aria-label={isOpen ? "Close menu" : "Open menu"}
           aria-expanded={isOpen}
           aria-controls="mobile-nav"
-          className="inline-flex h-12 w-12 items-center justify-center rounded-md md:hidden"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-md md:hidden"
         >
           <span className="sr-only">Menu</span>
           <motion.span
@@ -132,7 +132,7 @@ export default function Navbar() {
                   transition: { staggerChildren: 0.06, delayChildren: 0.05 },
                 },
               }}
-              className="font-display flex flex-col items-end gap-6 py-6 pr-4 pl-4 text-right text-[2.5rem] sm:pr-6 sm:pl-6"
+              className="font-display flex flex-col items-end gap-8 py-8 pr-6 pl-6 text-right text-5xl sm:pr-8 sm:pl-8"
             >
               {navItems.map((item) => {
                 const active = item.isActive(pathname ?? "/");
@@ -160,6 +160,15 @@ export default function Navbar() {
                   </motion.li>
                 );
               })}
+              <motion.li
+                key="theme-toggle-mobile"
+                variants={{
+                  hidden: { y: -8, opacity: 0 },
+                  show: { y: 0, opacity: 1 },
+                }}
+              >
+                <ThemeToggle className="font-display" size={28} />
+              </motion.li>
             </motion.ul>
           </motion.div>
         )}
