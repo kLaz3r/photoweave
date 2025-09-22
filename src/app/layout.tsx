@@ -4,6 +4,8 @@ import AmbientBackground from "~/components/AmbientBackground";
 import Footer from "~/components/Footer";
 import Navbar from "~/components/Navbar";
 import ScrollProgressBar from "~/components/ScrollProgressBar";
+import ThemeInit from "~/components/ThemeInit";
+import ThemeScript from "~/components/ThemeScript";
 
 import { type Metadata } from "next";
 import { Bricolage_Grotesque, Righteous } from "next/font/google";
@@ -34,6 +36,8 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="font-body bg-background relative w-screen max-w-screen overflow-x-clip">
+        <ThemeScript />
+        <ThemeInit />
         <AmbientBackground opacity={0.18} />
         <ScrollProgressBar />
         <Navbar />

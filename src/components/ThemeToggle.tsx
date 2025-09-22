@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { FiMoon, FiSun } from "react-icons/fi";
 import { useThemeStore } from "~/lib/theme";
 
@@ -14,6 +15,11 @@ export default function ThemeToggle({
 }: ThemeToggleProps) {
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <button
@@ -27,7 +33,9 @@ export default function ThemeToggle({
       aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
       title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
     >
-      {theme === "light" ? (
+      {!mounted ? (
+        <FiSun size={size} className="text-text" aria-hidden="true" />
+      ) : theme === "light" ? (
         <FiSun size={size} className="text-text" aria-hidden="true" />
       ) : (
         <FiMoon size={size} className="text-text" aria-hidden="true" />

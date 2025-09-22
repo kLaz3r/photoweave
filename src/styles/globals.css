@@ -12,6 +12,19 @@
   --theme-background: oklch(98.13% 0.0077 27.43deg);
 }
 
+/* System preference fallback before JS runs */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --theme-text: oklch(92% 0.01 34.11deg);
+    --theme-background: oklch(8% 0.005 27.43deg);
+    --theme-primary: oklch(68% 0.2 30.95deg);
+    --theme-secondary: oklch(88% 0.1 64.49deg);
+    --theme-accent: oklch(75% 0.25 279.61deg);
+    --theme-illustration-dark: oklch(25.93% 0.0685 30.65deg);
+  }
+}
+
 /* Map Tailwind tokens to theme variables once (do not scope per selector) */
 @theme inline {
   --font-body: var(--font-bricolage-grotesque), sans-serif;
@@ -30,7 +43,17 @@
   );
 }
 
-[data-theme="dark"] {
+:root[data-theme="light"] {
+  color-scheme: light;
+  --theme-illustration-dark: oklch(24.93% 0.0685 30.65deg);
+  --theme-primary: oklch(58.71% 0.186 30.95deg);
+  --theme-secondary: oklch(83.52% 0.0843 64.49deg);
+  --theme-accent: oklch(55.2% 0.2163 279.61deg);
+  --theme-text: oklch(13.95% 0.0289 34.11deg);
+  --theme-background: oklch(98.13% 0.0077 27.43deg);
+}
+
+:root[data-theme="dark"] {
   color-scheme: dark;
   /* Only override the runtime variables */
   --theme-text: oklch(92% 0.01 34.11deg);
