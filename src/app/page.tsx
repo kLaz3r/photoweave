@@ -1,3 +1,7 @@
+"use client";
+
+import { cubicBezier } from "motion";
+import { motion } from "motion/react";
 import Image from "next/image";
 import { PiUserFill } from "react-icons/pi";
 import HeroBackground from "~/components/HeroBackground";
@@ -14,51 +18,119 @@ import {
   AccordionTrigger,
 } from "~/components/ui/accordion";
 
+const easeOutExpo = cubicBezier(0.22, 1, 0.36, 1);
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.12, delayChildren: 0.12 },
+  },
+};
+
+const fadeUpChild = {
+  hidden: { opacity: 0, y: 16 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.7, ease: easeOutExpo },
+  },
+};
+
+const slideLeft = {
+  hidden: { opacity: 0, x: -24 },
+  show: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.85, ease: easeOutExpo },
+  },
+};
+
+const slideRight = {
+  hidden: { opacity: 0, x: 24 },
+  show: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.85, ease: easeOutExpo },
+  },
+};
+
 const HeroSection = () => {
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center">
+    <motion.section
+      className="relative flex min-h-screen w-full items-center justify-center"
+      initial="hidden"
+      animate="show"
+      variants={staggerContainer}
+    >
       <HeroBackground blur={100} width={960} height={540} opacity={0.2} />
       <div className="container mt-[100px] flex h-[calc(100vh-100px)] flex-col items-center justify-between md:flex-row">
-        <div className="flex w-full flex-col gap-6 md:w-1/2">
-          <h1 className="font-display text-5xl md:text-8xl">
+        <motion.div
+          className="flex w-full flex-col gap-6 md:w-1/2"
+          variants={fadeUpChild}
+        >
+          <motion.h1
+            className="font-display text-5xl md:text-8xl"
+            variants={fadeUpChild}
+          >
             Turn your photo chaos into{" "}
             <span className="text-gradient">COLLAGE</span> magic.
-          </h1>
-          <p className="text-lg md:text-2xl">
+          </motion.h1>
+          <motion.p className="text-lg md:text-2xl" variants={fadeUpChild}>
             PhotoWeave intelligently arranges your best memories into a stunning
             collage, automatically. No fuss, just fun.
-          </p>
-          <div className="flex flex-col items-center gap-4 md:flex-row">
-            <button className="bg-accent rounded-full px-8 py-4 text-2xl font-bold text-white">
+          </motion.p>
+          <motion.div
+            className="flex flex-col items-center gap-4 md:flex-row"
+            variants={fadeUpChild}
+          >
+            <motion.button
+              className="bg-accent rounded-full px-8 py-4 text-2xl font-bold text-white"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 500, damping: 32 }}
+            >
               Start Weaving!
-            </button>
-            <p className="text-lg">
+            </motion.button>
+            <motion.p className="text-lg" variants={fadeUpChild}>
               Join 10,000+ happy creators <br /> who&apos;ve woven their
               stories!
-            </p>
-          </div>
-        </div>
-        <div>
-          <Image
-            className="w-full md:w-auto"
-            src="/hero-photo.png"
-            alt="Hero image"
-            width={600}
-            height={600}
-          />
-        </div>
+            </motion.p>
+          </motion.div>
+        </motion.div>
+        <motion.div variants={fadeUpChild}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, rotate: -1 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            transition={{ duration: 0.95, ease: easeOutExpo }}
+          >
+            <Image
+              className="w-full md:w-auto"
+              src="/hero-photo.png"
+              alt="Hero image"
+              width={600}
+              height={600}
+            />
+          </motion.div>
+        </motion.div>
       </div>
-    </div>
+    </motion.section>
   );
 };
 
 const FeaturesSection = () => {
   return (
-    <div className="py-20">
+    <motion.section
+      className="py-20"
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, amount: 0.2 }}
+      variants={staggerContainer}
+    >
       <div className="container mx-auto">
         <div className="grid grid-cols-1 gap-16 md:grid-cols-3">
           {/* Feature 1 */}
-          <div className="flex flex-col gap-3">
+          <motion.div className="flex flex-col gap-3" variants={fadeUpChild}>
             <div className="flex flex-row items-center gap-3">
               <SmartLayoutsIcon height={40} />
               <h3 className="font-display text-2xl text-[var(--theme-accent)]">
@@ -70,10 +142,10 @@ const FeaturesSection = () => {
               them into the perfect layout in seconds. No more dragging,
               dropping, or resizing!
             </p>
-          </div>
+          </motion.div>
 
           {/* Feature 2 */}
-          <div className="flex flex-col gap-3">
+          <motion.div className="flex flex-col gap-3" variants={fadeUpChild}>
             <div className="flex flex-row items-center gap-3">
               <CreateShareIcon height={40} />
               <h3 className="font-display text-2xl text-[var(--theme-accent)]">
@@ -85,10 +157,10 @@ const FeaturesSection = () => {
               any device, letting you create and share a beautiful collage in
               just a few clicks.
             </p>
-          </div>
+          </motion.div>
 
           {/* Feature 3 */}
-          <div className="flex flex-col gap-3">
+          <motion.div className="flex flex-col gap-3" variants={fadeUpChild}>
             <div className="flex flex-row items-center gap-3">
               <ScreenToFrameIcon height={40} />
               <h3 className="font-display text-2xl text-[var(--theme-accent)]">
@@ -100,82 +172,134 @@ const FeaturesSection = () => {
               anything from a phone screen to a poster on your wall. No blur,
               just beauty.
             </p>
-          </div>
+          </motion.div>
         </div>
       </div>
-    </div>
+    </motion.section>
   );
 };
 
 const FrameSection = () => {
   return (
-    <div className="py-24">
+    <motion.section
+      className="py-24"
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, amount: 0.25 }}
+    >
       <div className="container mx-auto grid grid-cols-1 items-center gap-12 md:grid-cols-2">
-        <div className="flex flex-col gap-6">
-          <h2 className="font-display text-5xl leading-12 md:text-6xl md:leading-tight">
+        <motion.div className="flex flex-col gap-6" variants={slideLeft}>
+          <motion.h2
+            className="font-display text-5xl leading-12 md:text-6xl md:leading-tight"
+            variants={fadeUpChild}
+          >
             Bring your whole holiday adventure into a <br />{" "}
             <span className="text-gradient">single, beautiful</span> frame.
-          </h2>
-          <p className="text-xl md:text-2xl">
+          </motion.h2>
+          <motion.p className="text-xl md:text-2xl" variants={fadeUpChild}>
             Don&apos;t let your favorite moments get lost in your camera roll.
             Tell the whole story at a glance and relive the fun over and over
             again.
-          </p>
-          <ul className="list-disc space-y-3 pl-6 text-xl">
-            <li>Showcase every highlight, from beach days to city nights</li>
-            <li>Combine photos from multiple phones into one epic story</li>
-            <li>
+          </motion.p>
+          <motion.ul
+            className="list-disc space-y-3 pl-6 text-xl"
+            variants={staggerContainer}
+          >
+            <motion.li variants={fadeUpChild}>
+              Showcase every highlight, from beach days to city nights
+            </motion.li>
+            <motion.li variants={fadeUpChild}>
+              Combine photos from multiple phones into one epic story
+            </motion.li>
+            <motion.li variants={fadeUpChild}>
               Create the perfect &apos;thank you&apos; card for travel buddies
-            </li>
-            <li>Print it for a real-life photo frame that makes you smile</li>
-          </ul>
-        </div>
+            </motion.li>
+            <motion.li variants={fadeUpChild}>
+              Print it for a real-life photo frame that makes you smile
+            </motion.li>
+          </motion.ul>
+        </motion.div>
 
-        <div className="flex w-full items-center justify-center">
-          <div className="w-full max-w-[350px] md:max-w-[700px]">
+        <motion.div
+          className="flex w-full items-center justify-center"
+          variants={slideRight}
+        >
+          <motion.div
+            className="w-full max-w-[350px] md:max-w-[700px]"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7 }}
+          >
             <CollageIllustration
               className="h-auto w-full"
               title="Collage frame illustration"
             />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
-    </div>
+    </motion.section>
   );
 };
 
 const PhoneSection = () => {
   return (
-    <div className="py-24">
+    <motion.section
+      className="py-24"
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, amount: 0.25 }}
+    >
       <div className="container mx-auto grid grid-cols-1 items-center gap-12 md:grid-cols-2">
-        <div className="flex items-center justify-center self-center">
-          <Image
-            src="/phone.png"
-            alt="Phone collage preview"
-            width={520}
-            height={520}
-          />
-        </div>
+        <motion.div
+          className="flex items-center justify-center self-center"
+          variants={slideLeft}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+          >
+            <Image
+              src="/phone.png"
+              alt="Phone collage preview"
+              width={520}
+              height={520}
+            />
+          </motion.div>
+        </motion.div>
 
-        <div className="flex flex-col gap-6">
-          <h2 className="font-display text-6xl leading-16 md:text-6xl">
+        <motion.div className="flex flex-col gap-6" variants={slideRight}>
+          <motion.h2
+            className="font-display text-6xl leading-16 md:text-6xl"
+            variants={fadeUpChild}
+          >
             Your camera roll’s new
             <br />
             <span className="text-gradient">best friend.</span>
-          </h2>
-          <p className="text-xl md:text-2xl">
+          </motion.h2>
+          <motion.p className="text-xl md:text-2xl" variants={fadeUpChild}>
             PhotoWeave transforms that endless scroll of pictures into a
             collection of cherished memories you&apos;ll actually want to look
             at, share, and print.
-          </p>
-          <ul className="list-disc space-y-3 pl-6 text-xl">
-            <li>Go from hundreds of pics to one masterpiece</li>
-            <li>Rediscover forgotten gems from your gallery</li>
-            <li>Perfect for birthdays, parties, and family events</li>
-          </ul>
-        </div>
+          </motion.p>
+          <motion.ul
+            className="list-disc space-y-3 pl-6 text-xl"
+            variants={staggerContainer}
+          >
+            <motion.li variants={fadeUpChild}>
+              Go from hundreds of pics to one masterpiece
+            </motion.li>
+            <motion.li variants={fadeUpChild}>
+              Rediscover forgotten gems from your gallery
+            </motion.li>
+            <motion.li variants={fadeUpChild}>
+              Perfect for birthdays, parties, and family events
+            </motion.li>
+          </motion.ul>
+        </motion.div>
       </div>
-    </div>
+    </motion.section>
   );
 };
 
@@ -208,17 +332,34 @@ const testimonials: Testimonial[] = [
 
 const TestimonialsSection = () => {
   return (
-    <div className="py-24">
+    <motion.section
+      className="py-24"
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, amount: 0.2 }}
+    >
       <div className="container mx-auto">
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-12 xl:gap-16">
+        <motion.div
+          className="grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-12 xl:gap-16"
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: { staggerChildren: 0.08, delayChildren: 0.05 },
+            },
+          }}
+        >
           {testimonials.map((t) => (
-            <div
+            <motion.div
               key={t.name}
               className="rounded-3xl p-[1px] drop-shadow-lg"
               style={{
                 background:
                   "linear-gradient(180deg, var(--theme-accent), var(--theme-primary))",
               }}
+              variants={fadeUpChild}
+              whileHover={{ y: -2, scale: 1.01 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
             >
               <div className="bg-background flex h-full flex-col justify-between rounded-3xl p-8 md:p-10">
                 <p className="text-lg leading-relaxed md:text-xl">
@@ -241,84 +382,95 @@ const TestimonialsSection = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.section>
   );
 };
 
 const FAQSection = () => {
   return (
-    <div className="py-24">
+    <motion.section
+      className="py-24"
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, amount: 0.25 }}
+    >
       <div className="container mx-auto grid grid-cols-1 gap-8 md:grid-cols-2">
-        <div className="flex flex-col gap-4">
-          <h2 className="font-display text-center text-6xl leading-tight md:text-left md:text-6xl">
+        <motion.div className="flex flex-col gap-4" variants={slideLeft}>
+          <motion.h2
+            className="font-display text-center text-6xl leading-tight md:text-left md:text-6xl"
+            variants={fadeUpChild}
+          >
             Spend less time editing, more time remembering.
-          </h2>
-          <p className="text-xl md:text-2xl">
+          </motion.h2>
+          <motion.p className="text-xl md:text-2xl" variants={fadeUpChild}>
             PhotoWeave is the simplest, most cheerful way to gather your
             memories. Just pick your photos, and our smart tech handles the
             rest, creating something beautiful you&apos;ll be excited to share.
-          </p>
-        </div>
+          </motion.p>
+        </motion.div>
 
-        <div>
-          <Accordion
-            type="single"
-            collapsible
-            className="divide-y divide-[color:rgba(0,0,0,0.08)] dark:divide-[color:rgba(255,255,255,0.1)]"
-          >
-            <AccordionItem value="q1">
-              <AccordionTrigger className="text-2xl">
-                Is PhotoWeave free to use?
-              </AccordionTrigger>
-              <AccordionContent>
-                Yes. You can create collages for free. Premium export options
-                may be offered later, but the core experience will remain free.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="q2">
-              <AccordionTrigger className="text-2xl">
-                How many photos can I add to one collage?
-              </AccordionTrigger>
-              <AccordionContent>
-                Add as many as you like—our smart layout adapts. For best
-                results, we recommend 10–50 photos.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="q3">
-              <AccordionTrigger className="text-2xl">
-                Does this work on my phone?
-              </AccordionTrigger>
-              <AccordionContent>
-                Absolutely. PhotoWeave is a web app that works on modern
-                browsers across iOS, Android, and desktop.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="q4">
-              <AccordionTrigger className="text-2xl">
-                Can I make adjustments to the final collage?
-              </AccordionTrigger>
-              <AccordionContent>
-                Yes—you can shuffle layouts, swap photos, and fine‑tune the
-                arrangement before exporting.
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="q5">
-              <AccordionTrigger className="text-2xl">
-                What happens to my photos? Are they private?
-              </AccordionTrigger>
-              <AccordionContent>
-                Your photos stay private. We only process them to generate your
-                collage and don’t share them with anyone.
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
+        <motion.div variants={slideRight}>
+          <motion.div variants={fadeUpChild}>
+            <Accordion
+              type="single"
+              collapsible
+              className="divide-y divide-[color:rgba(0,0,0,0.08)] dark:divide-[color:rgba(255,255,255,0.1)]"
+            >
+              <AccordionItem value="q1">
+                <AccordionTrigger className="text-2xl">
+                  Is PhotoWeave free to use?
+                </AccordionTrigger>
+                <AccordionContent>
+                  Yes. You can create collages for free. Premium export options
+                  may be offered later, but the core experience will remain
+                  free.
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="q2">
+                <AccordionTrigger className="text-2xl">
+                  How many photos can I add to one collage?
+                </AccordionTrigger>
+                <AccordionContent>
+                  Add as many as you like—our smart layout adapts. For best
+                  results, we recommend 10–50 photos.
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="q3">
+                <AccordionTrigger className="text-2xl">
+                  Does this work on my phone?
+                </AccordionTrigger>
+                <AccordionContent>
+                  Absolutely. PhotoWeave is a web app that works on modern
+                  browsers across iOS, Android, and desktop.
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="q4">
+                <AccordionTrigger className="text-2xl">
+                  Can I make adjustments to the final collage?
+                </AccordionTrigger>
+                <AccordionContent>
+                  Yes—you can shuffle layouts, swap photos, and fine‑tune the
+                  arrangement before exporting.
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="q5">
+                <AccordionTrigger className="text-2xl">
+                  What happens to my photos? Are they private?
+                </AccordionTrigger>
+                <AccordionContent>
+                  Your photos stay private. We only process them to generate
+                  your collage and don’t share them with anyone.
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </motion.div>
+        </motion.div>
       </div>
-    </div>
+    </motion.section>
   );
 };
 
@@ -340,23 +492,41 @@ export default function HomePage() {
 
 const FinalCTASection = () => {
   return (
-    <div className="py-28">
-      <div className="container mx-auto flex flex-col items-center justify-center gap-6 text-center">
-        <p className="text-2xl opacity-80 md:text-xl">
+    <motion.section
+      className="py-28"
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, amount: 0.3 }}
+    >
+      <motion.div
+        className="container mx-auto flex flex-col items-center justify-center gap-6 text-center"
+        variants={staggerContainer}
+      >
+        <motion.p
+          className="text-2xl opacity-80 md:text-xl"
+          variants={fadeUpChild}
+        >
           You pick the pics. <br /> We do the magic.
-        </p>
-        <h2 className="font-display text-6xl leading-16 md:text-7xl">
+        </motion.p>
+        <motion.h2
+          className="font-display text-6xl leading-16 md:text-7xl"
+          variants={fadeUpChild}
+        >
           Ready to weave your
           <br />
           <span className="text-gradient">own story?</span>
-        </h2>
-        <button
+        </motion.h2>
+        <motion.button
           type="button"
           className="bg-accent rounded-full px-10 py-5 text-2xl font-bold text-white shadow-lg transition-colors hover:opacity-90"
+          variants={fadeUpChild}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: "spring", stiffness: 500, damping: 32 }}
         >
           Start Weaving!
-        </button>
-      </div>
-    </div>
+        </motion.button>
+      </motion.div>
+    </motion.section>
   );
 };
