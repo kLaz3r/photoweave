@@ -476,7 +476,7 @@ const FAQSection = () => {
 
 export default function HomePage() {
   return (
-    <main className="bg-background text-text relative flex min-h-screen w-screen max-w-screen flex-col items-center justify-center">
+    <main className="text-text relative flex min-h-screen w-screen max-w-screen flex-col items-center justify-center">
       <div className="relative z-10 flex w-screen max-w-screen flex-col items-center justify-center px-4">
         <HeroSection />
         <FeaturesSection />

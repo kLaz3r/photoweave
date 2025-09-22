@@ -1,5 +1,6 @@
 import "~/styles/globals.css";
 
+import AmbientBackground from "~/components/AmbientBackground";
 import Footer from "~/components/Footer";
 import Navbar from "~/components/Navbar";
 import ScrollProgressBar from "~/components/ScrollProgressBar";
@@ -32,7 +33,8 @@ export default function RootLayout({
       className={`${bricolage.variable} ${righteous.variable}`}
       suppressHydrationWarning
     >
-      <body className="font-body bg-background w-screen max-w-screen overflow-x-clip">
+      <body className="font-body bg-background relative w-screen max-w-screen overflow-x-clip">
+        <AmbientBackground opacity={0.18} />
         <ScrollProgressBar />
         <Navbar />
         {children}
