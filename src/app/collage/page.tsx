@@ -1,8 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {
+  DigitalIcon,
+  GridIcon,
+  MasonryIcon,
+  PrintIcon,
+} from "~/components/icons";
 
 type Thumb = { id: string; src: string };
+type CanvasType = "Print" | "Digital";
+type LayoutType = "Masonry" | "Grid";
 
 export default function CollagePage() {
   const [thumbs] = useState<Thumb[]>(
@@ -13,6 +21,100 @@ export default function CollagePage() {
   );
 
   const fileStats = useMemo(() => ({ count: 25, sizeMB: 130 }), []);
+
+  // Form state
+  const [canvasType, setCanvasType] = useState<CanvasType>("Print");
+  const [sizePreset, setSizePreset] = useState<string>("Custom Dimensions");
+  const [customWidth, setCustomWidth] = useState<string>("");
+  const [customHeight, setCustomHeight] = useState<string>("");
+  const [resolution, setResolution] = useState<string>("150 DPI (Standard)");
+  const [format, setFormat] = useState<string>("JPEG (Smallest File Size)");
+  const [transparency, setTransparency] = useState<boolean>(false);
+  const [layout, setLayout] = useState<LayoutType>("Masonry");
+  const [maintainAspect, setMaintainAspect] = useState<boolean>(true);
+
+  // placeholder is computed inline where used
+
+  const printSizeOptions: string[] = [
+    "9x13cm (Portrait)",
+    "13x9cm (Landscape)",
+    "10x15cm (Portrait)",
+    "15x10cm (Landscape)",
+    "13x18cm (Portrait)",
+    "18x13cm (Landscape)",
+    "15x20cm (Portrait)",
+    "20x15cm (Landscape)",
+    "20x25cm (Portrait)",
+    "25x20cm (Landscape)",
+    "21x29.7cm A4 (Portrait)",
+    "29.7x21cm A4 (Landscape)",
+    "30x40cm (Portrait)",
+    "40x30cm (Landscape)",
+    "29.7x42.0cm A3 (Portrait)",
+    "42.0x29.7cm A3 (Landscape)",
+    "40x50cm (Portrait)",
+    "50x40cm (Landscape)",
+    "50x70cm (Portrait)",
+    "70x50cm (Landscape)",
+    "100x70cm (Portrait)",
+    "70x100cm (Landscape)",
+    "Custom Dimensions",
+  ];
+
+  const digitalSizeOptions: Array<
+    { group: string; options: string[] } | { label: string; value: string }
+  > = [
+    {
+      group: "Phone Screens",
+      options: [
+        "1080x1920 (Portrait)",
+        "1920x1080 (Landscape)",
+        "1170x2532 iPhone (Portrait)",
+        "2532x1170 iPhone (Landscape)",
+      ],
+    },
+    {
+      group: "Desktop Wallpapers",
+      options: [
+        "1920x1080 (Landscape)",
+        "2560x1440 (Landscape)",
+        "3840x2160 4K (Landscape)",
+        "1080x1920 (Portrait)",
+        "1440x2560 (Portrait)",
+        "2160x3840 4K (Portrait)",
+      ],
+    },
+    {
+      group: "Social Media",
+      options: [
+        "Instagram 1080x1080 (Square)",
+        "Instagram 1080x1350 (Portrait)",
+        "Instagram 1080x566 (Landscape)",
+        "Instagram Story/Reel 1080x1920",
+        "Facebook Post 1200x630",
+        "Facebook Cover 820x312",
+        "Twitter/X Header 1500x500",
+        "LinkedIn Post 1200x627",
+        "YouTube Thumbnail 1280x720",
+        "Pinterest Pin 1000x1500",
+      ],
+    },
+    { label: "Custom Dimensions", value: "Custom Dimensions" },
+  ];
+
+  const onChangeCanvasType = (v: CanvasType) => {
+    setCanvasType(v);
+    setSizePreset("Custom Dimensions");
+    setCustomWidth("");
+    setCustomHeight("");
+    setResolution("150 DPI (Standard)");
+  };
+
+  const onChangeFormat: React.ChangeEventHandler<HTMLSelectElement> = (e) => {
+    const next = e.target.value;
+    setFormat(next);
+    if (!next.startsWith("PNG")) setTransparency(false);
+  };
 
   return (
     <main className="text-text container mx-auto mt-[96px] mb-16 px-4">
@@ -111,8 +213,24 @@ export default function CollagePage() {
           <div>
             <h2 className="font-display mb-4 flex items-center justify-between text-2xl md:text-3xl">
               Configuration
-              <span className="ml-3 inline-flex h-10 w-12 items-center justify-center rounded-lg border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_60%,transparent)] text-2xl backdrop-blur-sm">
-                🖨️
+              <span
+                aria-label={`Canvas Type: ${canvasType}`}
+                className="ml-3 inline-flex items-center gap-4 rounded-3xl border border-[color:var(--theme-accent)] px-6 py-3 shadow-xl backdrop-blur-md"
+              >
+                {canvasType === "Print" ? (
+                  <PrintIcon
+                    height={40}
+                    className="text-[color:var(--theme-accent)]"
+                  />
+                ) : (
+                  <DigitalIcon
+                    height={40}
+                    className="text-[color:var(--theme-accent)]"
+                  />
+                )}
+                <span className="font-display text-2xl font-bold tracking-wide text-[color:var(--theme-text)]">
+                  {canvasType}
+                </span>
               </span>
             </h2>
 
@@ -122,9 +240,15 @@ export default function CollagePage() {
                   Canvas Type
                 </label>
                 <div className="relative">
-                  <select className="w-full appearance-none rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] px-3 py-2 pr-9 text-base backdrop-blur-sm">
-                    <option>Print</option>
-                    <option>Digital</option>
+                  <select
+                    className="w-full appearance-none rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] px-3 py-2 pr-9 text-base backdrop-blur-sm"
+                    value={canvasType}
+                    onChange={(e) =>
+                      onChangeCanvasType(e.target.value as CanvasType)
+                    }
+                  >
+                    <option value="Print">Print</option>
+                    <option value="Digital">Digital</option>
                   </select>
                   <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
                     ▾
@@ -133,10 +257,42 @@ export default function CollagePage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-sm opacity-80">Size</label>
+                <label className="mb-1 block text-sm opacity-80">
+                  Size Presets
+                </label>
                 <div className="relative">
-                  <select className="w-full appearance-none rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] px-3 py-2 pr-9 backdrop-blur-sm">
-                    <option>3x4/Custom</option>
+                  <select
+                    className="w-full appearance-none rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] px-3 py-2 pr-9 backdrop-blur-sm"
+                    value={sizePreset}
+                    onChange={(e) => setSizePreset(e.target.value)}
+                  >
+                    {canvasType === "Print" ? (
+                      <>
+                        {printSizeOptions.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </>
+                    ) : (
+                      <>
+                        {digitalSizeOptions.map((entry, idx) =>
+                          "group" in entry ? (
+                            <optgroup key={idx} label={entry.group}>
+                              {entry.options.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ) : (
+                            <option key={entry.value} value={entry.value}>
+                              {entry.label}
+                            </option>
+                          ),
+                        )}
+                      </>
+                    )}
                   </select>
                   <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
                     ▾
@@ -144,33 +300,49 @@ export default function CollagePage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-sm opacity-80">Width</label>
-                  <input
-                    className="placeholder:text-text/40 w-full rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] px-3 py-2 backdrop-blur-sm"
-                    placeholder="mm"
-                  />
+              {sizePreset === "Custom Dimensions" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm opacity-80">
+                      Width
+                    </label>
+                    <input
+                      className="placeholder:text-text/40 w-full rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] px-3 py-2 backdrop-blur-sm"
+                      placeholder={canvasType === "Print" ? "mm" : "px"}
+                      value={customWidth}
+                      onChange={(e) => setCustomWidth(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm opacity-80">
+                      Height
+                    </label>
+                    <input
+                      className="placeholder:text-text/40 w-full rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] px-3 py-2 backdrop-blur-sm"
+                      placeholder={canvasType === "Print" ? "mm" : "px"}
+                      value={customHeight}
+                      onChange={(e) => setCustomHeight(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm opacity-80">
-                    Height
-                  </label>
-                  <input
-                    className="placeholder:text-text/40 w-full rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] px-3 py-2 backdrop-blur-sm"
-                    placeholder="mm"
-                  />
-                </div>
-              </div>
+              )}
 
               <div>
                 <label className="mb-1 block text-sm opacity-80">
                   Resolution
                 </label>
                 <div className="relative">
-                  <select className="w-full appearance-none rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] px-3 py-2 pr-9 backdrop-blur-sm">
-                    <option>300 DPI (High)</option>
-                    <option>150 DPI</option>
+                  <select
+                    className="w-full appearance-none rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] px-3 py-2 pr-9 backdrop-blur-sm disabled:opacity-60"
+                    value={resolution}
+                    onChange={(e) => setResolution(e.target.value)}
+                    disabled={canvasType === "Digital"}
+                  >
+                    <option value="300 DPI (High)">300DPI (High)</option>
+                    <option value="150 DPI (Standard)">
+                      150DPI (Standard)
+                    </option>
+                    <option value="96 DPI (Screen)">96DPI (Screen)</option>
                   </select>
                   <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
                     ▾
@@ -181,44 +353,77 @@ export default function CollagePage() {
               <div>
                 <label className="mb-1 block text-sm opacity-80">Format</label>
                 <div className="relative">
-                  <select className="w-full appearance-none rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] px-3 py-2 pr-9 backdrop-blur-sm">
-                    <option>JPEG (Standard)</option>
-                    <option>PNG</option>
+                  <select
+                    className="w-full appearance-none rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] px-3 py-2 pr-9 backdrop-blur-sm"
+                    value={format}
+                    onChange={onChangeFormat}
+                  >
+                    <option value="JPEG (Smallest File Size)">
+                      JPEG (Smallest File Size)
+                    </option>
+                    <option value="PNG (Transparency)">
+                      PNG (Transparency)
+                    </option>
+                    <option value="TIFF (Print Quality)">
+                      TIFF (Print Quality)
+                    </option>
                   </select>
                   <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
                     ▾
                   </span>
                 </div>
               </div>
-
-              <label className="flex items-center gap-3 text-sm">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-[color:var(--theme-accent)]"
-                />
-                Transparency
-              </label>
+              {format.startsWith("PNG") && (
+                <label className="flex items-center gap-3 text-sm">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-[color:var(--theme-accent)]"
+                    checked={transparency}
+                    onChange={(e) => setTransparency(e.target.checked)}
+                  />
+                  Transparency
+                </label>
+              )}
 
               <div>
                 <div className="mb-1 flex items-center justify-between">
                   <span className="text-sm opacity-80">Layout</span>
-                  <div className="grid grid-cols-5 gap-1">
-                    {Array.from({ length: 10 }).map((_, i) => (
-                      <span
-                        key={i}
-                        className="h-4 w-4 rounded-sm bg-[color:color-mix(in_oklch,var(--theme-text)_90%,transparent)]"
-                      />
-                    ))}
-                  </div>
                 </div>
-                <div className="relative">
-                  <select className="w-full appearance-none rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] px-3 py-2 pr-9 backdrop-blur-sm">
-                    <option>Masonry</option>
-                    <option>Grid</option>
-                  </select>
-                  <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2">
-                    ▾
-                  </span>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setLayout("Masonry")}
+                    className={[
+                      "flex flex-col items-center justify-center gap-2 rounded-xl border px-5 py-4",
+                      layout === "Masonry"
+                        ? "border-[color:var(--theme-accent)]"
+                        : "border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)]",
+                      "bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] backdrop-blur-sm",
+                    ].join(" ")}
+                  >
+                    <MasonryIcon
+                      height={44}
+                      className="text-[color:var(--theme-text)]"
+                    />
+                    <span className="mt-1 text-base">Masonry</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLayout("Grid")}
+                    className={[
+                      "flex flex-col items-center justify-center gap-2 rounded-xl border px-5 py-4",
+                      layout === "Grid"
+                        ? "border-[color:var(--theme-accent)]"
+                        : "border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)]",
+                      "bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] backdrop-blur-sm",
+                    ].join(" ")}
+                  >
+                    <GridIcon
+                      height={44}
+                      className="text-[color:var(--theme-text)]"
+                    />
+                    <span className="mt-1 text-base">Grid</span>
+                  </button>
                 </div>
               </div>
 
@@ -226,16 +431,10 @@ export default function CollagePage() {
                 <input
                   type="checkbox"
                   className="h-4 w-4 accent-[color:var(--theme-accent)]"
+                  checked={maintainAspect}
+                  onChange={(e) => setMaintainAspect(e.target.checked)}
                 />
                 Maintain Aspect Ratio
-              </label>
-
-              <label className="flex items-center gap-3 text-sm">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-[color:var(--theme-accent)]"
-                />
-                Apply Shadow Effects
               </label>
             </form>
           </div>
