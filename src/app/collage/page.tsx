@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DigitalIcon,
   GridIcon,
@@ -8,19 +8,34 @@ import {
   PrintIcon,
 } from "~/components/icons";
 
-type Thumb = { id: string; src: string };
 type CanvasType = "Print" | "Digital";
 type LayoutType = "Masonry" | "Grid";
 
-export default function CollagePage() {
-  const [thumbs] = useState<Thumb[]>(
-    Array.from({ length: 3 }).map((_, i) => ({
-      id: String(i + 1),
-      src: "/hero-photo.png",
-    })),
-  );
+type SelectedImage = {
+  id: string;
+  file: File;
+  previewUrl: string; // object URL for thumbnail
+};
 
-  const fileStats = useMemo(() => ({ count: 25, sizeMB: 130 }), []);
+export default function CollagePage() {
+  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
+  const [isCompressing, setIsCompressing] = useState<boolean>(false);
+  const [compressedFiles, setCompressedFiles] = useState<File[]>([]);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const fileStats = useMemo(() => {
+    const count = selectedImages.length;
+    const sizeBytes = selectedImages.reduce(
+      (acc, img) => acc + img.file.size,
+      0,
+    );
+    const sizeMB = Math.max(
+      0.01,
+      Number((sizeBytes / (1024 * 1024)).toFixed(2)),
+    );
+    return { count, sizeMB };
+  }, [selectedImages]);
 
   // Form state
   const [canvasType, setCanvasType] = useState<CanvasType>("Print");
@@ -32,6 +47,14 @@ export default function CollagePage() {
   const [transparency, setTransparency] = useState<boolean>(false);
   const [layout, setLayout] = useState<LayoutType>("Masonry");
   const [maintainAspect, setMaintainAspect] = useState<boolean>(true);
+  const [spacing, setSpacing] = useState<number>(0.03);
+
+  // Preview state
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState<boolean>(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // placeholder is computed inline where used
 
@@ -116,6 +139,256 @@ export default function CollagePage() {
     if (!next.startsWith("PNG")) setTransparency(false);
   };
 
+  // Helpers
+  function parseDpiFromResolution(value: string): number {
+    const re = /(\d+)\s*DPI/i;
+    const match = re.exec(value);
+    return match ? parseInt(match[1]!, 10) : 150;
+  }
+
+  function parseDimensionsFromPreset(
+    preset: string,
+    kind: CanvasType,
+  ): { width: number | null; height: number | null } {
+    // Returns values in mm for Print, px for Digital
+    const re = /(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)/;
+    const numbers = re.exec(preset);
+    if (!numbers) return { width: null, height: null };
+    let w = parseFloat(numbers[1]!);
+    let h = parseFloat(numbers[2]!);
+    if (kind === "Print") {
+      // Values are in cm in preset labels → convert to mm
+      // e.g., "21x29.7cm A4 (Portrait)"
+      w = w * 10;
+      h = h * 10;
+    }
+    return { width: w, height: h };
+  }
+
+  function getNumericCustom(value: string): number | null {
+    const num = parseFloat(value);
+    return isFinite(num) && !isNaN(num) ? num : null;
+  }
+
+  function getOutputFormat(): "jpeg" | "png" | "tiff" {
+    if (format.startsWith("PNG")) return "png";
+    if (format.startsWith("TIFF")) return "tiff";
+    return "jpeg";
+  }
+
+  // Image compression to 100px long side, JPEG 60%
+  async function compressImageToTinyJpeg(file: File): Promise<File> {
+    const bitmap = await createImageBitmap(file);
+    const { width, height } = bitmap;
+    const longSide = Math.max(width, height);
+    const scale = longSide > 100 ? 100 / longSide : 1;
+    const targetW = Math.max(1, Math.round(width * scale));
+    const targetH = Math.max(1, Math.round(height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = targetW;
+    canvas.height = targetH;
+    const ctx = canvas.getContext("2d", { alpha: false });
+    if (!ctx) throw new Error("Canvas not supported");
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+    const blob = await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("Compression failed"))),
+        "image/jpeg",
+        0.6,
+      ),
+    );
+    const tinyFile = new File(
+      [blob],
+      file.name.replace(/\.[^.]+$/, "") + "_preview.jpg",
+      { type: "image/jpeg" },
+    );
+    return tinyFile;
+  }
+
+  // Handle file selection
+  const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    // Revoke existing preview URLs
+    selectedImages.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+    const next = files.map((f, i) => ({
+      id: `${Date.now()}_${i}`,
+      file: f,
+      previewUrl: URL.createObjectURL(f),
+    }));
+    setSelectedImages(next);
+  };
+
+  const onRemoveImage = (id: string) => {
+    const img = selectedImages.find((i) => i.id === id);
+    if (img) URL.revokeObjectURL(img.previewUrl);
+    setSelectedImages((prev) => prev.filter((i) => i.id !== id));
+  };
+
+  const onClearAll = () => {
+    selectedImages.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+    setSelectedImages([]);
+    setCompressedFiles([]);
+    setPreviewUrl((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return null;
+    });
+    setPreviewError(null);
+  };
+
+  // Compress whenever selectedImages changes
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedImages.length) {
+      setCompressedFiles([]);
+      return;
+    }
+    setIsCompressing(true);
+    void (async () => {
+      try {
+        const tiny = await Promise.all(
+          selectedImages.map((si) => compressImageToTinyJpeg(si.file)),
+        );
+        if (!cancelled) setCompressedFiles(tiny);
+      } catch (err) {
+        if (!cancelled) console.error(err);
+      } finally {
+        if (!cancelled) setIsCompressing(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedImages]);
+
+  // Build and send preview request
+  async function sendPreviewRequest(signal?: AbortSignal): Promise<Blob> {
+    const outputFormat = getOutputFormat();
+    const isPrint = canvasType === "Print";
+    const endpoint = isPrint
+      ? "/api/collage/preview"
+      : "/api/collage/preview-pixels";
+
+    const fd = new FormData();
+    // Files
+    const filesToSend = compressedFiles.length
+      ? compressedFiles
+      : selectedImages.map((s) => s.file);
+    filesToSend.forEach((f) => fd.append("files", f));
+
+    // Dimensions
+    let widthVal: number | null = null;
+    let heightVal: number | null = null;
+
+    if (sizePreset !== "Custom Dimensions") {
+      const parsed = parseDimensionsFromPreset(sizePreset, canvasType);
+      widthVal = parsed.width;
+      heightVal = parsed.height;
+    } else {
+      const w = getNumericCustom(customWidth);
+      const h = getNumericCustom(customHeight);
+      widthVal = w;
+      heightVal = h;
+    }
+
+    if (isPrint) {
+      if (widthVal != null) fd.append("width_mm", String(widthVal));
+      if (heightVal != null) fd.append("height_mm", String(heightVal));
+      const dpi = parseDpiFromResolution(resolution);
+      fd.append("dpi", String(dpi));
+    } else {
+      if (widthVal != null) fd.append("width_px", String(Math.round(widthVal)));
+      if (heightVal != null)
+        fd.append("height_px", String(Math.round(heightVal)));
+      fd.append("dpi", String(96));
+    }
+
+    // Other params
+    fd.append("layout_style", layout === "Masonry" ? "masonry" : "grid");
+    // Convert fraction (0.0-0.3) to percent with 2 decimals, clamp 0-100
+    const spacingPercent = Math.max(
+      0,
+      Math.min(100, Math.round(spacing * 10000) / 100),
+    );
+    fd.append("spacing", String(spacingPercent));
+    const bg = outputFormat === "png" && transparency ? "#00000000" : "#FFFFFF";
+    fd.append("background_color", bg);
+    fd.append("maintain_aspect_ratio", String(maintainAspect));
+    fd.append("apply_shadow", String(false));
+    fd.append("output_format", outputFormat);
+    fd.append("pretrim_borders", String(false));
+    fd.append("face_aware_cropping", String(false));
+    fd.append("face_margin", String(0.08));
+
+    const baseUrl =
+      process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+    const url = `${baseUrl}${endpoint}`;
+    const res = await fetch(url, {
+      method: "POST",
+      body: fd,
+      signal,
+      headers: {
+        // Let browser set Content-Type for FormData
+        "Cache-Control": "no-store",
+      },
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(text || `Preview failed with ${res.status}`);
+    }
+    return await res.blob();
+  }
+
+  function requestPreviewDebounced() {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      // Abort any in-flight request
+      if (abortRef.current) abortRef.current.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      setIsLoadingPreview(true);
+      setPreviewError(null);
+      void (async () => {
+        try {
+          const blob = await sendPreviewRequest(controller.signal);
+          const objUrl = URL.createObjectURL(blob);
+          setPreviewUrl((old) => {
+            if (old) URL.revokeObjectURL(old);
+            return objUrl;
+          });
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          setPreviewError(
+            err instanceof Error ? err.message : "Preview failed",
+          );
+        } finally {
+          setIsLoadingPreview(false);
+        }
+      })();
+    }, 400);
+  }
+
+  // Trigger preview on layout/dim changes
+  useEffect(() => {
+    if (selectedImages.length < 2) return; // wait until we have >= 2 files
+    requestPreviewDebounced();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    layout,
+    canvasType,
+    sizePreset,
+    customWidth,
+    customHeight,
+    format,
+    transparency,
+    maintainAspect,
+    spacing,
+    compressedFiles,
+  ]);
+
   return (
     <main className="text-text container mx-auto mt-[96px] mb-16 px-4">
       <section className="relative rounded-[28px] border border-[color:color-mix(in_oklch,var(--theme-text)_10%,transparent)] bg-[linear-gradient(180deg,color-mix(in_oklch,var(--theme-background)_60%,transparent),color-mix(in_oklch,var(--theme-background)_30%,transparent))] p-6 shadow-2xl backdrop-blur-2xl md:p-8 lg:p-10">
@@ -132,10 +405,19 @@ export default function CollagePage() {
                 Drag & Drop
                 <br /> Photos Here
               </span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={onPickFiles}
+              />
             </div>
             <button
               type="button"
               className="mt-5 w-full rounded-full bg-[color:var(--theme-primary)]/80 px-6 py-3 text-lg font-semibold text-white transition hover:bg-[color:var(--theme-primary)]"
+              onClick={() => fileInputRef.current?.click()}
             >
               Choose Files
             </button>
@@ -147,17 +429,24 @@ export default function CollagePage() {
               <p className="mt-2">
                 {fileStats.count} Files, {fileStats.sizeMB} MB
               </p>
+              {isCompressing && <p className="mt-1">Optimizing previews…</p>}
             </div>
             <div className="mt-4 grid grid-cols-3 gap-4">
-              {thumbs.map((t) => (
+              {selectedImages.map((img) => (
                 <div
-                  key={t.id}
-                  className="relative h-20 w-full rounded-md bg-[color:color-mix(in_oklch,var(--theme-text)_12%,transparent)]"
+                  key={img.id}
+                  className="relative h-20 w-full overflow-hidden rounded-md bg-[color:color-mix(in_oklch,var(--theme-text)_12%,transparent)]"
                 >
+                  <img
+                    src={img.previewUrl}
+                    alt="preview"
+                    className="h-full w-full object-cover"
+                  />
                   <button
                     type="button"
                     aria-label="Remove"
                     className="absolute top-2 right-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/80"
+                    onClick={() => onRemoveImage(img.id)}
                   >
                     ×
                   </button>
@@ -167,6 +456,7 @@ export default function CollagePage() {
             <button
               type="button"
               className="mt-5 inline-flex w-full items-center justify-center rounded-full border border-current/20 px-6 py-3 text-base"
+              onClick={onClearAll}
             >
               <span className="mr-2">×</span>Clear All
             </button>
@@ -177,28 +467,59 @@ export default function CollagePage() {
             <h2 className="font-display mb-4 text-2xl md:text-3xl">
               Collage Preview
             </h2>
-            <div className="flex aspect-square w-full items-center justify-center rounded-2xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_65%,transparent)] backdrop-blur-md">
-              <span className="opacity-60">Preview</span>
+            <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_65%,transparent)] backdrop-blur-md">
+              {previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt="Collage preview"
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <span className="opacity-60">Preview</span>
+              )}
             </div>
             <div className="mt-4 text-sm">
               <div className="mb-2 flex items-center justify-between">
-                <span>Status: Pending</span>
+                <span>
+                  Status:{" "}
+                  {isLoadingPreview
+                    ? "Loading"
+                    : previewError
+                      ? "Error"
+                      : previewUrl
+                        ? "Ready"
+                        : "Idle"}
+                </span>
               </div>
               <div className="h-2 w-full rounded-full bg-[color:color-mix(in_oklch,var(--theme-text)_12%,transparent)]">
-                <div className="h-2 w-1/5 rounded-full bg-[color:var(--theme-accent)]"></div>
+                <div
+                  className="h-2 rounded-full bg-[color:var(--theme-accent)] transition-all"
+                  style={{
+                    width: isLoadingPreview
+                      ? "40%"
+                      : previewUrl
+                        ? "100%"
+                        : "0%",
+                  }}
+                ></div>
               </div>
-              <p className="mt-2">Job ID: 69420</p>
+              {previewError && (
+                <p className="mt-2 text-red-500">{previewError}</p>
+              )}
             </div>
             <div className="mt-5 flex items-center gap-4">
               <button
                 type="button"
-                className="rounded-full border border-current/20 px-6 py-3 text-base"
+                className="rounded-full border border-current/20 px-6 py-3 text-base disabled:opacity-60"
+                disabled={!selectedImages.length}
+                onClick={() => requestPreviewDebounced()}
               >
                 Preview
               </button>
               <button
                 type="button"
-                className="rounded-full bg-[color:var(--theme-accent)] px-6 py-3 text-base font-semibold text-white hover:opacity-90"
+                className="rounded-full bg-[color:var(--theme-accent)] px-6 py-3 text-base font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                disabled
               >
                 Download
               </button>
@@ -425,6 +746,24 @@ export default function CollagePage() {
                     <span className="mt-1 text-base">Grid</span>
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-sm opacity-80">Spacing</span>
+                  <span className="text-xs opacity-60">
+                    {Math.round(spacing * 10000) / 100}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={0.3}
+                  step={0.01}
+                  value={spacing}
+                  onChange={(e) => setSpacing(parseFloat(e.target.value))}
+                  className="w-full"
+                />
               </div>
 
               <label className="flex items-center gap-3 text-sm">
