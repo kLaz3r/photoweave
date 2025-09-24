@@ -23,6 +23,7 @@ type SelectedImage = {
   id: string;
   file: File;
   previewUrl: string; // object URL for thumbnail
+  shotTimeMs: number; // Date taken in ms since epoch (fallback to file.lastModified)
 };
 
 export default function CollagePage() {
@@ -48,7 +49,7 @@ export default function CollagePage() {
 
   // Form state
   const [canvasType, setCanvasType] = useState<CanvasType>("Print");
-  const [sizePreset, setSizePreset] = useState<string>("Custom Dimensions");
+  const [sizePreset, setSizePreset] = useState<string>("40x30cm (Landscape)");
   const [customWidth, setCustomWidth] = useState<string>("");
   const [customHeight, setCustomHeight] = useState<string>("");
   const [resolution, setResolution] = useState<string>("150 DPI (Standard)");
@@ -57,6 +58,9 @@ export default function CollagePage() {
   const [layout, setLayout] = useState<LayoutType>("Masonry");
   const [maintainAspect, setMaintainAspect] = useState<boolean>(true);
   const [spacing, setSpacing] = useState<number>(0.03);
+  const [orderMode, setOrderMode] = useState<"chronological" | "random">(
+    "chronological",
+  );
 
   // Preview state
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -196,6 +200,18 @@ export default function CollagePage() {
       w = w * 10;
       h = h * 10;
     }
+    // Respect explicit orientation in label if present
+    const isLandscape = /(\(|\s)Landscape\)/i.test(preset);
+    const isPortrait = /(\(|\s)Portrait\)/i.test(preset);
+    if (isLandscape && w < h) {
+      const tmp = w;
+      w = h;
+      h = tmp;
+    } else if (isPortrait && w > h) {
+      const tmp = w;
+      w = h;
+      h = tmp;
+    }
     return { width: w, height: h };
   }
 
@@ -243,23 +259,173 @@ export default function CollagePage() {
   }
 
   // Handle file selection
+  function parseExifDateStringToMs(s: string): number | null {
+    // Expected format: YYYY:MM:DD HH:MM:SS
+    const re = /^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/;
+    const m = re.exec(s);
+    if (!m) return null;
+    const year = Number(m[1]);
+    const month = Number(m[2]);
+    const day = Number(m[3]);
+    const hour = Number(m[4]);
+    const min = Number(m[5]);
+    const sec = Number(m[6]);
+    const date = new Date(year, month - 1, day, hour, min, sec);
+    const ms = date.getTime();
+    return Number.isFinite(ms) ? ms : null;
+  }
+
+  async function extractExifShotTimeMs(file: File): Promise<number | null> {
+    // Only attempt for JPEGs; fallback to lastModified for others
+    const type = file.type.toLowerCase();
+    if (!type.includes("jpeg") && !type.includes("jpg")) return null;
+    try {
+      const buf = await file.arrayBuffer();
+      const view = new DataView(buf);
+      // JPEG SOI
+      if (view.byteLength < 4 || view.getUint16(0) !== 0xffd8) return null;
+      let offset = 2;
+      while (offset + 4 <= view.byteLength) {
+        if (view.getUint8(offset) !== 0xff) break;
+        const marker = view.getUint8(offset + 1);
+        const size = view.getUint16(offset + 2);
+        if (marker === 0xe1 && offset + 4 + size <= view.byteLength) {
+          // APP1
+          const sig = new TextDecoder().decode(
+            new Uint8Array(buf, offset + 4, 6),
+          );
+          if (sig.startsWith("Exif")) {
+            const tiffStart = offset + 10; // 4 bytes len + 6 bytes "Exif\0\0"
+            if (tiffStart + 8 > view.byteLength) return null;
+            const endianMark = new TextDecoder().decode(
+              new Uint8Array(buf, tiffStart, 2),
+            );
+            const little = endianMark === "II";
+            const getU16 = (pos: number) => view.getUint16(pos, little);
+            const getU32 = (pos: number) => view.getUint32(pos, little);
+            const ifd0 = tiffStart + getU32(tiffStart + 4);
+            if (ifd0 + 2 > view.byteLength) return null;
+            const entries0 = getU16(ifd0);
+            let exifIFDPtr: number | null = null;
+            let dateTimeStr: string | null = null;
+
+            function readAsciiFromEntry(
+              valOffset: number,
+              count: number,
+            ): string | null {
+              // Values are at TIFF base
+              const start = tiffStart + valOffset;
+              if (start + count <= view.byteLength) {
+                const bytes = new Uint8Array(buf, start, count);
+                // Trim nulls
+                const text = new TextDecoder()
+                  .decode(bytes)
+                  .replace(/\0+$/, "");
+                return text || null;
+              }
+              return null;
+            }
+
+            // IFD0 scan for DateTime (0x0132) and ExifIFD pointer (0x8769)
+            for (let i = 0; i < entries0; i++) {
+              const pos = ifd0 + 2 + i * 12;
+              const tag = getU16(pos);
+              const typeId = getU16(pos + 2);
+              const count = getU32(pos + 4);
+              const value = getU32(pos + 8);
+              if (tag === 0x0132 && typeId === 2 && count >= 10 && count < 64) {
+                const s = count <= 4 ? null : readAsciiFromEntry(value, count);
+                if (s) dateTimeStr = s;
+              } else if (tag === 0x8769) {
+                exifIFDPtr = tiffStart + value;
+              }
+            }
+            // Prefer ExifIFD DateTimeOriginal (0x9003) or Digitized (0x9004)
+            const readExifIFD = (): string | null => {
+              if (!exifIFDPtr || exifIFDPtr + 2 > view.byteLength) return null;
+              const n = getU16(exifIFDPtr);
+              for (let i = 0; i < n; i++) {
+                const pos = exifIFDPtr + 2 + i * 12;
+                const tag = getU16(pos);
+                const typeId = getU16(pos + 2);
+                const count = getU32(pos + 4);
+                const value = getU32(pos + 8);
+                if (
+                  (tag === 0x9003 || tag === 0x9004) &&
+                  typeId === 2 &&
+                  count >= 10 &&
+                  count < 64
+                ) {
+                  const s =
+                    count <= 4 ? null : readAsciiFromEntry(value, count);
+                  if (s) return s;
+                }
+              }
+              return null;
+            };
+
+            const exifDate = readExifIFD();
+            const str = exifDate ?? dateTimeStr;
+            if (str) return parseExifDateStringToMs(str);
+          }
+        }
+        if (size < 2) break;
+        offset += 2 + size;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  function sortByShotTime(images: SelectedImage[]): SelectedImage[] {
+    return [...images].sort(
+      (a, b) =>
+        (a.shotTimeMs ?? a.file.lastModified) -
+        (b.shotTimeMs ?? b.file.lastModified),
+    );
+  }
+
+  function shuffleImages(images: SelectedImage[]): SelectedImage[] {
+    const arr = [...images];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = arr[i]!;
+      arr[i] = arr[j]!;
+      arr[j] = tmp;
+    }
+    return arr;
+  }
+
+  function applyOrdering(images: SelectedImage[]): SelectedImage[] {
+    return orderMode === "chronological"
+      ? sortByShotTime(images)
+      : shuffleImages(images);
+  }
+
   const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
-    const newItems = files.map((f, i) => ({
-      id: `${Date.now()}_${i}`,
-      file: f,
-      previewUrl: URL.createObjectURL(f),
-    }));
-    if (appendModeRef.current) {
-      // Append to existing without revoking existing previews
-      setSelectedImages((prev) => [...prev, ...newItems]);
-    } else {
-      // Replace existing: revoke old previews
-      selectedImages.forEach((img) => URL.revokeObjectURL(img.previewUrl));
-      setSelectedImages(newItems);
-    }
-    appendModeRef.current = false;
+    void (async () => {
+      const newItems: SelectedImage[] = await Promise.all(
+        files.map(async (f, i) => {
+          const exifMs = await extractExifShotTimeMs(f);
+          return {
+            id: `${Date.now()}_${i}`,
+            file: f,
+            previewUrl: URL.createObjectURL(f),
+            shotTimeMs: exifMs ?? f.lastModified,
+          };
+        }),
+      );
+      if (appendModeRef.current) {
+        setSelectedImages((prev) => applyOrdering([...prev, ...newItems]));
+      } else {
+        selectedImages.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+        setSelectedImages(applyOrdering(newItems));
+      }
+      appendModeRef.current = false;
+    })();
   };
 
   const onRemoveImage = (id: string) => {
@@ -1300,6 +1466,55 @@ export default function CollagePage() {
                 />
                 Maintain Aspect Ratio
               </label>
+
+              <div className="mt-4 rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_18%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_72%,transparent)] p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-sm opacity-80">Order Images</span>
+                  <span className="text-xs opacity-60">
+                    {orderMode === "chronological" ? "Chronological" : "Random"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedImages((prev) => {
+                        setOrderMode("chronological");
+                        return sortByShotTime(prev);
+                      })
+                    }
+                    className={[
+                      "flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm",
+                      orderMode === "chronological"
+                        ? "border-[color:var(--theme-accent)]"
+                        : "border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)]",
+                      "bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] backdrop-blur-sm",
+                    ].join(" ")}
+                  >
+                    <span>🕒</span>
+                    <span>Chronologically</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedImages((prev) => {
+                        setOrderMode("random");
+                        return shuffleImages(prev);
+                      })
+                    }
+                    className={[
+                      "flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm",
+                      orderMode === "random"
+                        ? "border-[color:var(--theme-accent)]"
+                        : "border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)]",
+                      "bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] backdrop-blur-sm",
+                    ].join(" ")}
+                  >
+                    <span>🎲</span>
+                    <span>Random</span>
+                  </button>
+                </div>
+              </div>
             </form>
           </div>
         </div>
