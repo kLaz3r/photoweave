@@ -165,7 +165,12 @@ export default function CollagePage() {
 
   const onChangeCanvasType = (v: CanvasType) => {
     setCanvasType(v);
-    setSizePreset("Custom Dimensions");
+    // When switching types, pick sensible defaults with concrete dimensions
+    if (v === "Print") {
+      setSizePreset("40x30cm (Landscape)");
+    } else {
+      setSizePreset("1080x1920 (Portrait)");
+    }
     setCustomWidth("");
     setCustomHeight("");
     setResolution("150 DPI (Standard)");
@@ -562,6 +567,21 @@ export default function CollagePage() {
 
   function requestPreviewDebounced() {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    // Do not call preview unless we have both width and height
+    let widthVal: number | null = null;
+    let heightVal: number | null = null;
+    if (sizePreset !== "Custom Dimensions") {
+      const parsed = parseDimensionsFromPreset(sizePreset, canvasType);
+      widthVal = parsed.width;
+      heightVal = parsed.height;
+    } else {
+      const w = getNumericCustom(customWidth);
+      const h = getNumericCustom(customHeight);
+      widthVal = w;
+      heightVal = h;
+    }
+    if (widthVal == null || heightVal == null) return;
+
     debounceTimerRef.current = setTimeout(() => {
       // Abort any in-flight request
       if (abortRef.current) abortRef.current.abort();
