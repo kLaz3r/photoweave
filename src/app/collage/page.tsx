@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import {
   DigitalIcon,
@@ -25,6 +26,48 @@ type SelectedImage = {
   previewUrl: string; // object URL for thumbnail
   shotTimeMs: number; // Date taken in ms since epoch (fallback to file.lastModified)
 };
+
+function parseDpiFromResolution(value: string): number {
+  const re = /(\d+)\s*DPI/i;
+  const match = re.exec(value);
+  return match ? parseInt(match[1]!, 10) : 150;
+}
+
+function parseDimensionsFromPreset(
+  preset: string,
+  kind: CanvasType,
+): { width: number | null; height: number | null } {
+  // Returns values in mm for Print, px for Digital
+  const re = /(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)/;
+  const numbers = re.exec(preset);
+  if (!numbers) return { width: null, height: null };
+  let w = parseFloat(numbers[1]!);
+  let h = parseFloat(numbers[2]!);
+  if (kind === "Print") {
+    // Values are in cm in preset labels → convert to mm
+    // e.g., "21x29.7cm A4 (Portrait)"
+    w = w * 10;
+    h = h * 10;
+  }
+  // Respect explicit orientation in label if present
+  const isLandscape = /(\(|\s)Landscape\)/i.test(preset);
+  const isPortrait = /(\(|\s)Portrait\)/i.test(preset);
+  if (isLandscape && w < h) {
+    const tmp = w;
+    w = h;
+    h = tmp;
+  } else if (isPortrait && w > h) {
+    const tmp = w;
+    w = h;
+    h = tmp;
+  }
+  return { width: w, height: h };
+}
+
+function getNumericCustom(value: string): number | null {
+  const num = parseFloat(value);
+  return Number.isFinite(num) && !Number.isNaN(num) ? num : null;
+}
 
 export default function CollagePage() {
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
@@ -181,49 +224,6 @@ export default function CollagePage() {
     setFormat(next);
     if (!next.startsWith("PNG")) setTransparency(false);
   };
-
-  // Helpers
-  function parseDpiFromResolution(value: string): number {
-    const re = /(\d+)\s*DPI/i;
-    const match = re.exec(value);
-    return match ? parseInt(match[1]!, 10) : 150;
-  }
-
-  function parseDimensionsFromPreset(
-    preset: string,
-    kind: CanvasType,
-  ): { width: number | null; height: number | null } {
-    // Returns values in mm for Print, px for Digital
-    const re = /(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)/;
-    const numbers = re.exec(preset);
-    if (!numbers) return { width: null, height: null };
-    let w = parseFloat(numbers[1]!);
-    let h = parseFloat(numbers[2]!);
-    if (kind === "Print") {
-      // Values are in cm in preset labels → convert to mm
-      // e.g., "21x29.7cm A4 (Portrait)"
-      w = w * 10;
-      h = h * 10;
-    }
-    // Respect explicit orientation in label if present
-    const isLandscape = /(\(|\s)Landscape\)/i.test(preset);
-    const isPortrait = /(\(|\s)Portrait\)/i.test(preset);
-    if (isLandscape && w < h) {
-      const tmp = w;
-      w = h;
-      h = tmp;
-    } else if (isPortrait && w > h) {
-      const tmp = w;
-      w = h;
-      h = tmp;
-    }
-    return { width: w, height: h };
-  }
-
-  function getNumericCustom(value: string): number | null {
-    const num = parseFloat(value);
-    return isFinite(num) && !isNaN(num) ? num : null;
-  }
 
   function getOutputFormat(): "jpeg" | "png" | "tiff" {
     if (format.startsWith("PNG")) return "png";
@@ -486,86 +486,100 @@ export default function CollagePage() {
     };
   }, [selectedImages]);
 
-  // Build and send preview request
-  async function sendPreviewRequest(signal?: AbortSignal): Promise<Blob> {
-    // Preview should always be a simple, fast JPEG regardless of selected format
-    const outputFormat = "jpeg" as const;
-    const isPrint = canvasType === "Print";
-    const endpoint = isPrint
-      ? "/api/collage/preview"
-      : "/api/collage/preview-pixels";
+  const sendPreviewRequest = useCallback(
+    async (signal?: AbortSignal): Promise<Blob> => {
+      // Preview should always be a simple, fast JPEG regardless of selected format
+      const outputFormat = "jpeg" as const;
+      const isPrint = canvasType === "Print";
+      const endpoint = isPrint
+        ? "/api/collage/preview"
+        : "/api/collage/preview-pixels";
 
-    const fd = new FormData();
-    // Files
-    const filesToSend = compressedFiles.length
-      ? compressedFiles
-      : selectedImages.map((s) => s.file);
-    filesToSend.forEach((f) => fd.append("files", f));
+      const fd = new FormData();
+      // Files
+      const filesToSend = compressedFiles.length
+        ? compressedFiles
+        : selectedImages.map((s) => s.file);
+      filesToSend.forEach((f) => fd.append("files", f));
 
-    // Dimensions
-    let widthVal: number | null = null;
-    let heightVal: number | null = null;
+      // Dimensions
+      let widthVal: number | null = null;
+      let heightVal: number | null = null;
 
-    if (sizePreset !== "Custom Dimensions") {
-      const parsed = parseDimensionsFromPreset(sizePreset, canvasType);
-      widthVal = parsed.width;
-      heightVal = parsed.height;
-    } else {
-      const w = getNumericCustom(customWidth);
-      const h = getNumericCustom(customHeight);
-      widthVal = w;
-      heightVal = h;
-    }
+      if (sizePreset !== "Custom Dimensions") {
+        const parsed = parseDimensionsFromPreset(sizePreset, canvasType);
+        widthVal = parsed.width;
+        heightVal = parsed.height;
+      } else {
+        const w = getNumericCustom(customWidth);
+        const h = getNumericCustom(customHeight);
+        widthVal = w;
+        heightVal = h;
+      }
 
-    if (isPrint) {
-      if (widthVal != null) fd.append("width_mm", String(widthVal));
-      if (heightVal != null) fd.append("height_mm", String(heightVal));
-      const dpi = parseDpiFromResolution(resolution);
-      fd.append("dpi", String(dpi));
-    } else {
-      if (widthVal != null) fd.append("width_px", String(Math.round(widthVal)));
-      if (heightVal != null)
-        fd.append("height_px", String(Math.round(heightVal)));
-      fd.append("dpi", String(96));
-    }
+      if (isPrint) {
+        if (widthVal != null) fd.append("width_mm", String(widthVal));
+        if (heightVal != null) fd.append("height_mm", String(heightVal));
+        const dpi = parseDpiFromResolution(resolution);
+        fd.append("dpi", String(dpi));
+      } else {
+        if (widthVal != null)
+          fd.append("width_px", String(Math.round(widthVal)));
+        if (heightVal != null)
+          fd.append("height_px", String(Math.round(heightVal)));
+        fd.append("dpi", String(96));
+      }
 
-    // Other params
-    fd.append("layout_style", layout === "Masonry" ? "masonry" : "grid");
-    // Convert fraction (0.0-0.3) to percent with 2 decimals, clamp 0-100
-    const spacingPercent = Math.max(
-      0,
-      Math.min(100, Math.round(spacing * 10000) / 100),
-    );
-    fd.append("spacing", String(spacingPercent));
-    const bg = "#FFFFFF";
-    fd.append("background_color", bg);
-    fd.append("maintain_aspect_ratio", String(maintainAspect));
-    fd.append("apply_shadow", String(false));
-    fd.append("output_format", outputFormat);
-    fd.append("pretrim_borders", String(false));
-    fd.append("face_aware_cropping", String(false));
-    fd.append("face_margin", String(0.08));
+      // Other params
+      fd.append("layout_style", layout === "Masonry" ? "masonry" : "grid");
+      // Convert fraction (0.0-0.3) to percent with 2 decimals, clamp 0-100
+      const spacingPercent = Math.max(
+        0,
+        Math.min(100, Math.round(spacing * 10000) / 100),
+      );
+      fd.append("spacing", String(spacingPercent));
+      const bg = "#FFFFFF";
+      fd.append("background_color", bg);
+      fd.append("maintain_aspect_ratio", String(maintainAspect));
+      fd.append("apply_shadow", String(false));
+      fd.append("output_format", outputFormat);
+      fd.append("pretrim_borders", String(false));
+      fd.append("face_aware_cropping", String(false));
+      fd.append("face_margin", String(0.08));
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-    const url = `${baseUrl}${endpoint}`;
-    const res = await fetch(url, {
-      method: "POST",
-      body: fd,
-      signal,
-      headers: {
-        // Let browser set Content-Type for FormData
-        "Cache-Control": "no-store",
-      },
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(text || `Preview failed with ${res.status}`);
-    }
-    return await res.blob();
-  }
+      const baseUrl =
+        process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+      const url = `${baseUrl}${endpoint}`;
+      const res = await fetch(url, {
+        method: "POST",
+        body: fd,
+        signal,
+        headers: {
+          // Let browser set Content-Type for FormData
+          "Cache-Control": "no-store",
+        },
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `Preview failed with ${res.status}`);
+      }
+      return await res.blob();
+    },
+    [
+      canvasType,
+      compressedFiles,
+      customHeight,
+      customWidth,
+      layout,
+      maintainAspect,
+      resolution,
+      selectedImages,
+      sizePreset,
+      spacing,
+    ],
+  );
 
-  function requestPreviewDebounced() {
+  const requestPreviewDebounced = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     // Do not call preview unless we have both width and height
     let widthVal: number | null = null;
@@ -607,31 +621,20 @@ export default function CollagePage() {
         }
       })();
     }, 400);
-  }
+  }, [canvasType, customHeight, customWidth, sendPreviewRequest, sizePreset]);
 
   // Trigger preview on layout/dim changes
   useEffect(() => {
     if (selectedImages.length < 2) return; // wait until we have >= 2 files
     requestPreviewDebounced();
-  }, [
-    layout,
-    canvasType,
-    sizePreset,
-    customWidth,
-    customHeight,
-    format,
-    transparency,
-    maintainAspect,
-    spacing,
-    compressedFiles,
-  ]);
+  }, [requestPreviewDebounced, selectedImages.length]);
 
   // Compute width/height in millimeters for Optimize Grid
-  function computeCanvasMm(): {
+  const computeCanvasMm = useCallback((): {
     widthMm: number | null;
     heightMm: number | null;
     dpiVal: number;
-  } {
+  } => {
     const isPrint = canvasType === "Print";
     let widthVal: number | null = null;
     let heightVal: number | null = null;
@@ -653,169 +656,185 @@ export default function CollagePage() {
         px == null ? null : (px * 25.4) / dpiVal;
       return { widthMm: pxToMm(widthVal), heightMm: pxToMm(heightVal), dpiVal };
     }
-  }
+  }, [canvasType, customHeight, customWidth, resolution, sizePreset]);
 
   // Call Optimize Grid endpoint (debounced)
-  async function sendOptimizeGridRequest(signal?: AbortSignal): Promise<{
-    columns: number | null;
-    rows: number | null;
-    optimalNumImages: number | null;
-    delta: number | null;
-  }> {
-    const { widthMm, heightMm, dpiVal } = computeCanvasMm();
-    if (widthMm == null || heightMm == null) {
-      return { columns: null, rows: null, optimalNumImages: null, delta: null };
-    }
-    const spacingPercent = Math.max(
-      0,
-      Math.min(100, Math.round(spacing * 10000) / 100),
-    );
-    const fd = new FormData();
-    fd.append(
-      "num_images",
-      String(Math.max(0, Math.floor(selectedImages.length))),
-    );
-    fd.append("width_mm", String(widthMm));
-    fd.append("height_mm", String(heightMm));
-    fd.append("dpi", String(dpiVal));
-    fd.append("spacing", String(spacingPercent));
-    const baseUrl =
-      process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-    const url = `${baseUrl}/api/collage/optimize-grid`;
-    const res = await fetch(url, { method: "POST", body: fd, signal });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(text || `Optimize grid failed with ${res.status}`);
-    }
-    const json = (await res.json()) as {
-      success?: boolean;
-      optimization?: {
-        current_grid: {
-          total_images: number | string;
-          cols: number | string;
-          rows: number | string;
-          images_in_last_row: number | string;
-          is_perfect: boolean;
+  const sendOptimizeGridRequest = useCallback(
+    async (
+      signal?: AbortSignal,
+    ): Promise<{
+      columns: number | null;
+      rows: number | null;
+      optimalNumImages: number | null;
+      delta: number | null;
+    }> => {
+      const { widthMm, heightMm, dpiVal } = computeCanvasMm();
+      if (widthMm == null || heightMm == null) {
+        return {
+          columns: null,
+          rows: null,
+          optimalNumImages: null,
+          delta: null,
         };
-        closest_perfect_grid: null | {
-          type: "perfect" | "add_images" | "remove_images";
-          total_images?: number | string;
-          cols?: number | string;
-          rows?: number | string;
-          images_needed?: number | string;
-          images_to_remove?: number | string;
-        };
-        recommendations: {
-          add_images: Array<{
-            images_needed: number | string;
+      }
+      const spacingPercent = Math.max(
+        0,
+        Math.min(100, Math.round(spacing * 10000) / 100),
+      );
+      const fd = new FormData();
+      fd.append(
+        "num_images",
+        String(Math.max(0, Math.floor(selectedImages.length))),
+      );
+      fd.append("width_mm", String(widthMm));
+      fd.append("height_mm", String(heightMm));
+      fd.append("dpi", String(dpiVal));
+      fd.append("spacing", String(spacingPercent));
+      const baseUrl =
+        process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+      const url = `${baseUrl}/api/collage/optimize-grid`;
+      const res = await fetch(url, { method: "POST", body: fd, signal });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `Optimize grid failed with ${res.status}`);
+      }
+      const json = (await res.json()) as {
+        success?: boolean;
+        optimization?: {
+          current_grid: {
             total_images: number | string;
             cols: number | string;
             rows: number | string;
-          }>;
-          remove_images: Array<{
-            images_to_remove: number | string;
-            total_images: number | string;
-            cols: number | string;
-            rows: number | string;
-          }>;
+            images_in_last_row: number | string;
+            is_perfect: boolean;
+          };
+          closest_perfect_grid: null | {
+            type: "perfect" | "add_images" | "remove_images";
+            total_images?: number | string;
+            cols?: number | string;
+            rows?: number | string;
+            images_needed?: number | string;
+            images_to_remove?: number | string;
+          };
+          recommendations: {
+            add_images: Array<{
+              images_needed: number | string;
+              total_images: number | string;
+              cols: number | string;
+              rows: number | string;
+            }>;
+            remove_images: Array<{
+              images_to_remove: number | string;
+              total_images: number | string;
+              cols: number | string;
+              rows: number | string;
+            }>;
+          };
+          canvas_info: {
+            width: number | string;
+            height: number | string;
+            spacing: number | string;
+          };
         };
-        canvas_info: {
-          width: number | string;
-          height: number | string;
-          spacing: number | string;
-        };
+        message?: string;
       };
-      message?: string;
-    };
 
-    const toNum = (v: unknown): number | null => {
-      if (typeof v === "number" && Number.isFinite(v)) return v;
-      if (typeof v === "string") {
-        const n = Number(v);
-        return Number.isFinite(n) ? n : null;
+      const toNum = (v: unknown): number | null => {
+        if (typeof v === "number" && Number.isFinite(v)) return v;
+        if (typeof v === "string") {
+          const n = Number(v);
+          return Number.isFinite(n) ? n : null;
+        }
+        return null;
+      };
+
+      const opt = json.optimization;
+      if (!opt)
+        return {
+          columns: null,
+          rows: null,
+          optimalNumImages: null,
+          delta: null,
+        };
+
+      // Prefer closest perfect grid if provided
+      const closest = opt.closest_perfect_grid;
+      if (closest) {
+        const columns =
+          toNum(closest.cols) ?? toNum(opt.current_grid.cols) ?? null;
+        const rows =
+          toNum(closest.rows) ?? toNum(opt.current_grid.rows) ?? null;
+        const optimalNumImages =
+          toNum(closest.total_images) ??
+          (columns != null && rows != null ? columns * rows : null);
+        let delta: number | null = null;
+        if (closest.type === "add_images")
+          delta = toNum(closest.images_needed) ?? null;
+        else if (closest.type === "remove_images")
+          delta = -(toNum(closest.images_to_remove) ?? 0);
+        else if (closest.type === "perfect") delta = 0;
+        return { columns, rows, optimalNumImages, delta };
       }
-      return null;
-    };
 
-    const opt = json.optimization;
-    if (!opt)
-      return { columns: null, rows: null, optimalNumImages: null, delta: null };
+      // Otherwise select the best recommendation (smallest absolute change)
+      const adds = opt.recommendations?.add_images ?? [];
+      const removes = opt.recommendations?.remove_images ?? [];
 
-    // Prefer closest perfect grid if provided
-    const closest = opt.closest_perfect_grid;
-    if (closest) {
-      const columns =
-        toNum(closest.cols) ?? toNum(opt.current_grid.cols) ?? null;
-      const rows = toNum(closest.rows) ?? toNum(opt.current_grid.rows) ?? null;
-      const optimalNumImages =
-        toNum(closest.total_images) ??
-        (columns != null && rows != null ? columns * rows : null);
-      let delta: number | null = null;
-      if (closest.type === "add_images")
-        delta = toNum(closest.images_needed) ?? null;
-      else if (closest.type === "remove_images")
-        delta = -(toNum(closest.images_to_remove) ?? 0);
-      else if (closest.type === "perfect") delta = 0;
-      return { columns, rows, optimalNumImages, delta };
-    }
+      let best: {
+        cols: number;
+        rows: number;
+        total: number;
+        delta: number;
+      } | null = null;
 
-    // Otherwise select the best recommendation (smallest absolute change)
-    const adds = opt.recommendations?.add_images ?? [];
-    const removes = opt.recommendations?.remove_images ?? [];
-
-    let best: {
-      cols: number;
-      rows: number;
-      total: number;
-      delta: number;
-    } | null = null;
-
-    for (const rec of adds) {
-      const cols = toNum(rec.cols);
-      const rows = toNum(rec.rows);
-      const total = toNum(rec.total_images);
-      const need = toNum(rec.images_needed);
-      if (cols != null && rows != null && total != null && need != null) {
-        const candidate = { cols, rows, total, delta: need };
-        if (!best || Math.abs(candidate.delta) < Math.abs(best.delta))
-          best = candidate;
+      for (const rec of adds) {
+        const cols = toNum(rec.cols);
+        const rows = toNum(rec.rows);
+        const total = toNum(rec.total_images);
+        const need = toNum(rec.images_needed);
+        if (cols != null && rows != null && total != null && need != null) {
+          const candidate = { cols, rows, total, delta: need };
+          if (!best || Math.abs(candidate.delta) < Math.abs(best.delta))
+            best = candidate;
+        }
       }
-    }
-    for (const rec of removes) {
-      const cols = toNum(rec.cols);
-      const rows = toNum(rec.rows);
-      const total = toNum(rec.total_images);
-      const rm = toNum(rec.images_to_remove);
-      if (cols != null && rows != null && total != null && rm != null) {
-        const candidate = { cols, rows, total, delta: -rm };
-        if (!best || Math.abs(candidate.delta) < Math.abs(best.delta))
-          best = candidate;
+      for (const rec of removes) {
+        const cols = toNum(rec.cols);
+        const rows = toNum(rec.rows);
+        const total = toNum(rec.total_images);
+        const rm = toNum(rec.images_to_remove);
+        if (cols != null && rows != null && total != null && rm != null) {
+          const candidate = { cols, rows, total, delta: -rm };
+          if (!best || Math.abs(candidate.delta) < Math.abs(best.delta))
+            best = candidate;
+        }
       }
-    }
 
-    if (best) {
+      if (best) {
+        return {
+          columns: best.cols,
+          rows: best.rows,
+          optimalNumImages: best.total,
+          delta: best.delta,
+        };
+      }
+
+      // Fallback to current grid info
+      const cols = toNum(opt.current_grid.cols);
+      const rows = toNum(opt.current_grid.rows);
+      const total = toNum(opt.current_grid.total_images);
+      const deltaFallback = opt.current_grid.is_perfect ? 0 : null;
       return {
-        columns: best.cols,
-        rows: best.rows,
-        optimalNumImages: best.total,
-        delta: best.delta,
+        columns: cols,
+        rows: rows,
+        optimalNumImages: total,
+        delta: deltaFallback,
       };
-    }
+    },
+    [computeCanvasMm, selectedImages.length, spacing],
+  );
 
-    // Fallback to current grid info
-    const cols = toNum(opt.current_grid.cols);
-    const rows = toNum(opt.current_grid.rows);
-    const total = toNum(opt.current_grid.total_images);
-    const deltaFallback = opt.current_grid.is_perfect ? 0 : null;
-    return {
-      columns: cols,
-      rows: rows,
-      optimalNumImages: total,
-      delta: deltaFallback,
-    };
-  }
-
-  function requestOptimizeGridDebounced() {
+  const requestOptimizeGridDebounced = useCallback(() => {
     if (optimizeDebounceRef.current) clearTimeout(optimizeDebounceRef.current);
     optimizeDebounceRef.current = setTimeout(() => {
       if (optimizeAbortRef.current) optimizeAbortRef.current.abort();
@@ -837,23 +856,14 @@ export default function CollagePage() {
         }
       })();
     }, 400);
-  }
+  }, [sendOptimizeGridRequest]);
 
   // Trigger optimize-grid only for Grid layout
   useEffect(() => {
     if (layout !== "Grid") return;
     if (selectedImages.length < 2) return;
     requestOptimizeGridDebounced();
-  }, [
-    layout,
-    selectedImages.length,
-    canvasType,
-    sizePreset,
-    customWidth,
-    customHeight,
-    resolution,
-    spacing,
-  ]);
+  }, [layout, requestOptimizeGridDebounced, selectedImages.length]);
 
   // Cancel any in-flight job polling if user changes key settings
   useEffect(() => {
@@ -1068,10 +1078,13 @@ export default function CollagePage() {
                   key={img.id}
                   className="relative h-20 w-full overflow-hidden rounded-md bg-[color:color-mix(in_oklch,var(--theme-text)_12%,transparent)]"
                 >
-                  <img
+                  <Image
                     src={img.previewUrl}
                     alt="preview"
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                    unoptimized
                   />
                   <button
                     type="button"
@@ -1100,10 +1113,13 @@ export default function CollagePage() {
             </h2>
             <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_65%,transparent)] backdrop-blur-md">
               {previewUrl ? (
-                <img
+                <Image
                   src={previewUrl}
                   alt="Collage preview"
-                  className="h-full w-full object-contain"
+                  fill
+                  sizes="(min-width: 768px) 400px, 320px"
+                  className="object-contain"
+                  unoptimized
                 />
               ) : (
                 <span className="opacity-60">Preview</span>
