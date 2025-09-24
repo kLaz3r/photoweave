@@ -168,7 +168,8 @@ const AmbientBackground: React.FC<AmbientBackgroundProps> = ({
             "linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.35) 10%, rgba(255,255,255,0.8) 40%, rgba(255,255,255,1) 65%)",
           WebkitMaskImage:
             "linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.35) 10%, rgba(255,255,255,0.8) 40%, rgba(255,255,255,1) 65%)",
-          mixBlendMode: "var(--ambient-blend, normal)",
+          mixBlendMode:
+            "var(--ambient-blend, normal)" as unknown as React.CSSProperties["mixBlendMode"],
         }}
       />
 
