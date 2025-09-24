@@ -1,12 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { z } from "zod";
 import {
   DigitalIcon,
   GridIcon,
   MasonryIcon,
   PrintIcon,
 } from "~/components/icons";
+import { CreateCollageResponseSchema } from "~/lib/schemas/collage";
+
+const CollageStatusMinimalSchema = z.object({
+  status: z.enum(["pending", "processing", "completed", "failed"]),
+  progress: z.number().int().min(0).max(100).optional(),
+  error_message: z.string().nullable().optional(),
+});
 
 type CanvasType = "Print" | "Digital";
 type LayoutType = "Masonry" | "Grid";
@@ -23,6 +31,7 @@ export default function CollagePage() {
   const [compressedFiles, setCompressedFiles] = useState<File[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const appendModeRef = useRef<boolean>(false);
 
   const fileStats = useMemo(() => {
     const count = selectedImages.length;
@@ -55,6 +64,31 @@ export default function CollagePage() {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Download/job state
+  const [isCreatingJob, setIsCreatingJob] = useState<boolean>(false);
+  const [jobStatus, setJobStatus] = useState<
+    "pending" | "processing" | "completed" | "failed" | null
+  >(null);
+  const [jobProgress, setJobProgress] = useState<number>(0);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const jobAbortRef = useRef<AbortController | null>(null);
+
+  // Optimize Grid state
+  const [isOptimizingGrid, setIsOptimizingGrid] = useState<boolean>(false);
+  const [optimizeGridError, setOptimizeGridError] = useState<string | null>(
+    null,
+  );
+  const [gridAdvice, setGridAdvice] = useState<{
+    columns: number | null;
+    rows: number | null;
+    optimalNumImages: number | null;
+    delta: number | null;
+  }>({ columns: null, rows: null, optimalNumImages: null, delta: null });
+  const optimizeAbortRef = useRef<AbortController | null>(null);
+  const optimizeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   // placeholder is computed inline where used
 
@@ -212,14 +246,20 @@ export default function CollagePage() {
   const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
-    // Revoke existing preview URLs
-    selectedImages.forEach((img) => URL.revokeObjectURL(img.previewUrl));
-    const next = files.map((f, i) => ({
+    const newItems = files.map((f, i) => ({
       id: `${Date.now()}_${i}`,
       file: f,
       previewUrl: URL.createObjectURL(f),
     }));
-    setSelectedImages(next);
+    if (appendModeRef.current) {
+      // Append to existing without revoking existing previews
+      setSelectedImages((prev) => [...prev, ...newItems]);
+    } else {
+      // Replace existing: revoke old previews
+      selectedImages.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+      setSelectedImages(newItems);
+    }
+    appendModeRef.current = false;
   };
 
   const onRemoveImage = (id: string) => {
@@ -227,6 +267,17 @@ export default function CollagePage() {
     if (img) URL.revokeObjectURL(img.previewUrl);
     setSelectedImages((prev) => prev.filter((i) => i.id !== id));
   };
+
+  function removeNPhotos(count: number) {
+    setSelectedImages((prev) => {
+      const maxRemovable = Math.max(0, prev.length - 2);
+      const toRemove = Math.max(0, Math.min(count, maxRemovable));
+      if (toRemove <= 0) return prev;
+      const removed = prev.slice(-toRemove);
+      removed.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+      return prev.slice(0, prev.length - toRemove);
+    });
+  }
 
   const onClearAll = () => {
     selectedImages.forEach((img) => URL.revokeObjectURL(img.previewUrl));
@@ -266,7 +317,8 @@ export default function CollagePage() {
 
   // Build and send preview request
   async function sendPreviewRequest(signal?: AbortSignal): Promise<Blob> {
-    const outputFormat = getOutputFormat();
+    // Preview should always be a simple, fast JPEG regardless of selected format
+    const outputFormat = "jpeg" as const;
     const isPrint = canvasType === "Print";
     const endpoint = isPrint
       ? "/api/collage/preview"
@@ -314,7 +366,7 @@ export default function CollagePage() {
       Math.min(100, Math.round(spacing * 10000) / 100),
     );
     fd.append("spacing", String(spacingPercent));
-    const bg = outputFormat === "png" && transparency ? "#00000000" : "#FFFFFF";
+    const bg = "#FFFFFF";
     fd.append("background_color", bg);
     fd.append("maintain_aspect_ratio", String(maintainAspect));
     fd.append("apply_shadow", String(false));
@@ -375,7 +427,6 @@ export default function CollagePage() {
   useEffect(() => {
     if (selectedImages.length < 2) return; // wait until we have >= 2 files
     requestPreviewDebounced();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     layout,
     canvasType,
@@ -388,6 +439,396 @@ export default function CollagePage() {
     spacing,
     compressedFiles,
   ]);
+
+  // Compute width/height in millimeters for Optimize Grid
+  function computeCanvasMm(): {
+    widthMm: number | null;
+    heightMm: number | null;
+    dpiVal: number;
+  } {
+    const isPrint = canvasType === "Print";
+    let widthVal: number | null = null;
+    let heightVal: number | null = null;
+    if (sizePreset !== "Custom Dimensions") {
+      const parsed = parseDimensionsFromPreset(sizePreset, canvasType);
+      widthVal = parsed.width;
+      heightVal = parsed.height;
+    } else {
+      widthVal = getNumericCustom(customWidth);
+      heightVal = getNumericCustom(customHeight);
+    }
+    if (isPrint) {
+      const dpiVal = parseDpiFromResolution(resolution);
+      return { widthMm: widthVal, heightMm: heightVal, dpiVal };
+    } else {
+      // Convert px to mm using DPI (screen ~96)
+      const dpiVal = 96;
+      const pxToMm = (px: number | null) =>
+        px == null ? null : (px * 25.4) / dpiVal;
+      return { widthMm: pxToMm(widthVal), heightMm: pxToMm(heightVal), dpiVal };
+    }
+  }
+
+  // Call Optimize Grid endpoint (debounced)
+  async function sendOptimizeGridRequest(signal?: AbortSignal): Promise<{
+    columns: number | null;
+    rows: number | null;
+    optimalNumImages: number | null;
+    delta: number | null;
+  }> {
+    const { widthMm, heightMm, dpiVal } = computeCanvasMm();
+    if (widthMm == null || heightMm == null) {
+      return { columns: null, rows: null, optimalNumImages: null, delta: null };
+    }
+    const spacingPercent = Math.max(
+      0,
+      Math.min(100, Math.round(spacing * 10000) / 100),
+    );
+    const fd = new FormData();
+    fd.append(
+      "num_images",
+      String(Math.max(0, Math.floor(selectedImages.length))),
+    );
+    fd.append("width_mm", String(widthMm));
+    fd.append("height_mm", String(heightMm));
+    fd.append("dpi", String(dpiVal));
+    fd.append("spacing", String(spacingPercent));
+    const baseUrl =
+      process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+    const url = `${baseUrl}/api/collage/optimize-grid`;
+    const res = await fetch(url, { method: "POST", body: fd, signal });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(text || `Optimize grid failed with ${res.status}`);
+    }
+    const json = (await res.json()) as {
+      success?: boolean;
+      optimization?: {
+        current_grid: {
+          total_images: number | string;
+          cols: number | string;
+          rows: number | string;
+          images_in_last_row: number | string;
+          is_perfect: boolean;
+        };
+        closest_perfect_grid: null | {
+          type: "perfect" | "add_images" | "remove_images";
+          total_images?: number | string;
+          cols?: number | string;
+          rows?: number | string;
+          images_needed?: number | string;
+          images_to_remove?: number | string;
+        };
+        recommendations: {
+          add_images: Array<{
+            images_needed: number | string;
+            total_images: number | string;
+            cols: number | string;
+            rows: number | string;
+          }>;
+          remove_images: Array<{
+            images_to_remove: number | string;
+            total_images: number | string;
+            cols: number | string;
+            rows: number | string;
+          }>;
+        };
+        canvas_info: {
+          width: number | string;
+          height: number | string;
+          spacing: number | string;
+        };
+      };
+      message?: string;
+    };
+
+    const toNum = (v: unknown): number | null => {
+      if (typeof v === "number" && Number.isFinite(v)) return v;
+      if (typeof v === "string") {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      }
+      return null;
+    };
+
+    const opt = json.optimization;
+    if (!opt)
+      return { columns: null, rows: null, optimalNumImages: null, delta: null };
+
+    // Prefer closest perfect grid if provided
+    const closest = opt.closest_perfect_grid;
+    if (closest) {
+      const columns =
+        toNum(closest.cols) ?? toNum(opt.current_grid.cols) ?? null;
+      const rows = toNum(closest.rows) ?? toNum(opt.current_grid.rows) ?? null;
+      const optimalNumImages =
+        toNum(closest.total_images) ??
+        (columns != null && rows != null ? columns * rows : null);
+      let delta: number | null = null;
+      if (closest.type === "add_images")
+        delta = toNum(closest.images_needed) ?? null;
+      else if (closest.type === "remove_images")
+        delta = -(toNum(closest.images_to_remove) ?? 0);
+      else if (closest.type === "perfect") delta = 0;
+      return { columns, rows, optimalNumImages, delta };
+    }
+
+    // Otherwise select the best recommendation (smallest absolute change)
+    const adds = opt.recommendations?.add_images ?? [];
+    const removes = opt.recommendations?.remove_images ?? [];
+
+    let best: {
+      cols: number;
+      rows: number;
+      total: number;
+      delta: number;
+    } | null = null;
+
+    for (const rec of adds) {
+      const cols = toNum(rec.cols);
+      const rows = toNum(rec.rows);
+      const total = toNum(rec.total_images);
+      const need = toNum(rec.images_needed);
+      if (cols != null && rows != null && total != null && need != null) {
+        const candidate = { cols, rows, total, delta: need };
+        if (!best || Math.abs(candidate.delta) < Math.abs(best.delta))
+          best = candidate;
+      }
+    }
+    for (const rec of removes) {
+      const cols = toNum(rec.cols);
+      const rows = toNum(rec.rows);
+      const total = toNum(rec.total_images);
+      const rm = toNum(rec.images_to_remove);
+      if (cols != null && rows != null && total != null && rm != null) {
+        const candidate = { cols, rows, total, delta: -rm };
+        if (!best || Math.abs(candidate.delta) < Math.abs(best.delta))
+          best = candidate;
+      }
+    }
+
+    if (best) {
+      return {
+        columns: best.cols,
+        rows: best.rows,
+        optimalNumImages: best.total,
+        delta: best.delta,
+      };
+    }
+
+    // Fallback to current grid info
+    const cols = toNum(opt.current_grid.cols);
+    const rows = toNum(opt.current_grid.rows);
+    const total = toNum(opt.current_grid.total_images);
+    const deltaFallback = opt.current_grid.is_perfect ? 0 : null;
+    return {
+      columns: cols,
+      rows: rows,
+      optimalNumImages: total,
+      delta: deltaFallback,
+    };
+  }
+
+  function requestOptimizeGridDebounced() {
+    if (optimizeDebounceRef.current) clearTimeout(optimizeDebounceRef.current);
+    optimizeDebounceRef.current = setTimeout(() => {
+      if (optimizeAbortRef.current) optimizeAbortRef.current.abort();
+      const controller = new AbortController();
+      optimizeAbortRef.current = controller;
+      setIsOptimizingGrid(true);
+      setOptimizeGridError(null);
+      void (async () => {
+        try {
+          const result = await sendOptimizeGridRequest(controller.signal);
+          setGridAdvice(result);
+        } catch (err) {
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          setOptimizeGridError(
+            err instanceof Error ? err.message : "Optimize grid failed",
+          );
+        } finally {
+          setIsOptimizingGrid(false);
+        }
+      })();
+    }, 400);
+  }
+
+  // Trigger optimize-grid only for Grid layout
+  useEffect(() => {
+    if (layout !== "Grid") return;
+    if (selectedImages.length < 2) return;
+    requestOptimizeGridDebounced();
+  }, [
+    layout,
+    selectedImages.length,
+    canvasType,
+    sizePreset,
+    customWidth,
+    customHeight,
+    resolution,
+    spacing,
+  ]);
+
+  // Cancel any in-flight job polling if user changes key settings
+  useEffect(() => {
+    if (jobAbortRef.current) jobAbortRef.current.abort();
+    setIsCreatingJob(false);
+    setJobStatus(null);
+    setJobProgress(0);
+    setDownloadError(null);
+  }, [
+    layout,
+    canvasType,
+    sizePreset,
+    customWidth,
+    customHeight,
+    format,
+    transparency,
+    maintainAspect,
+    spacing,
+    selectedImages,
+  ]);
+
+  function buildCommonFormDataForCreate(isPrint: boolean): FormData {
+    const output = getOutputFormat();
+    const fd = new FormData();
+    // Use original files for final render
+    selectedImages.forEach((s) => fd.append("files", s.file));
+
+    // Dimensions
+    let widthVal: number | null = null;
+    let heightVal: number | null = null;
+    if (sizePreset !== "Custom Dimensions") {
+      const parsed = parseDimensionsFromPreset(sizePreset, canvasType);
+      widthVal = parsed.width;
+      heightVal = parsed.height;
+    } else {
+      widthVal = getNumericCustom(customWidth);
+      heightVal = getNumericCustom(customHeight);
+    }
+
+    if (isPrint) {
+      if (widthVal != null) fd.append("width_mm", String(widthVal));
+      if (heightVal != null) fd.append("height_mm", String(heightVal));
+      const dpi = parseDpiFromResolution(resolution);
+      fd.append("dpi", String(dpi));
+    } else {
+      if (widthVal != null) fd.append("width_px", String(Math.round(widthVal)));
+      if (heightVal != null)
+        fd.append("height_px", String(Math.round(heightVal)));
+      fd.append("dpi", String(96));
+    }
+
+    // Other params
+    fd.append("layout_style", layout === "Masonry" ? "masonry" : "grid");
+    const spacingPercent = Math.max(
+      0,
+      Math.min(100, Math.round(spacing * 10000) / 100),
+    );
+    fd.append("spacing", String(spacingPercent));
+    const bg = output === "png" && transparency ? "#00000000" : "#FFFFFF";
+    fd.append("background_color", bg);
+    fd.append("maintain_aspect_ratio", String(maintainAspect));
+    fd.append("apply_shadow", String(false));
+    fd.append("output_format", output);
+    fd.append("pretrim_borders", String(false));
+    fd.append("face_aware_cropping", String(false));
+    fd.append("face_margin", String(0.08));
+    return fd;
+  }
+
+  function suggestedFilename(): string {
+    const ext =
+      getOutputFormat() === "png"
+        ? "png"
+        : getOutputFormat() === "tiff"
+          ? "tiff"
+          : "jpg";
+    return `photoweave-collage.${ext}`;
+  }
+
+  function triggerDownload(blob: Blob): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = suggestedFilename();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleDownload(): Promise<void> {
+    if (selectedImages.length < 2 || isCreatingJob) return;
+    setIsCreatingJob(true);
+    setDownloadError(null);
+    setJobProgress(0);
+    setJobStatus("pending");
+
+    // Abort any existing job
+    if (jobAbortRef.current) jobAbortRef.current.abort();
+    const controller = new AbortController();
+    jobAbortRef.current = controller;
+
+    const isPrint = canvasType === "Print";
+    const createEndpoint = isPrint
+      ? "/api/collage/create"
+      : "/api/collage/create-pixels";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+    const createUrl = `${baseUrl}${createEndpoint}`;
+
+    try {
+      const fd = buildCommonFormDataForCreate(isPrint);
+      const createRes = await fetch(createUrl, {
+        method: "POST",
+        body: fd,
+        signal: controller.signal,
+      });
+      if (!createRes.ok) {
+        const text = await createRes.text().catch(() => "");
+        throw new Error(text || `Create failed with ${createRes.status}`);
+      }
+      const dataUnknown = (await createRes.json()) as unknown;
+      const data = CreateCollageResponseSchema.parse(dataUnknown);
+      setJobStatus(data.status);
+
+      // Poll status
+      const statusUrl = `${baseUrl}/api/collage/status/${data.job_id}`;
+      while (true) {
+        if (controller.signal.aborted)
+          throw new DOMException("Aborted", "AbortError");
+        const sRes = await fetch(statusUrl, { signal: controller.signal });
+        if (!sRes.ok) {
+          const t = await sRes.text().catch(() => "");
+          throw new Error(t || `Status failed with ${sRes.status}`);
+        }
+        const sUnknown = (await sRes.json()) as unknown;
+        const sJson = CollageStatusMinimalSchema.parse(sUnknown);
+        setJobStatus(sJson.status);
+        setJobProgress(typeof sJson.progress === "number" ? sJson.progress : 0);
+        if (sJson.status === "completed") break;
+        if (sJson.status === "failed")
+          throw new Error(sJson.error_message ?? "Collage rendering failed");
+        await new Promise((r) => setTimeout(r, 800));
+      }
+
+      // Download
+      const downloadUrl = `${baseUrl}/api/collage/download/${data.job_id}`;
+      const dRes = await fetch(downloadUrl, { signal: controller.signal });
+      if (!dRes.ok) {
+        const t = await dRes.text().catch(() => "");
+        throw new Error(t || `Download failed with ${dRes.status}`);
+      }
+      const blob = await dRes.blob();
+      triggerDownload(blob);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      setDownloadError(err instanceof Error ? err.message : "Download failed");
+    } finally {
+      setIsCreatingJob(false);
+    }
+  }
 
   return (
     <main className="text-text container mx-auto mt-[96px] mb-16 px-4">
@@ -417,7 +858,11 @@ export default function CollagePage() {
             <button
               type="button"
               className="mt-5 w-full rounded-full bg-[color:var(--theme-primary)]/80 px-6 py-3 text-lg font-semibold text-white transition hover:bg-[color:var(--theme-primary)]"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                appendModeRef.current = false;
+                if (fileInputRef.current) fileInputRef.current.value = "";
+                fileInputRef.current?.click();
+              }}
             >
               Choose Files
             </button>
@@ -490,7 +935,83 @@ export default function CollagePage() {
                         ? "Ready"
                         : "Idle"}
                 </span>
+                {jobStatus && (
+                  <span className="text-xs opacity-70">
+                    Render: {jobStatus}
+                    {typeof jobProgress === "number" && jobProgress > 0
+                      ? ` (${jobProgress}%)`
+                      : ""}
+                  </span>
+                )}
               </div>
+              {layout === "Grid" && (
+                <div className="mb-3 rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_18%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_72%,transparent)] p-3 text-sm shadow-sm">
+                  {isOptimizingGrid ? (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[color:var(--theme-accent)]" />
+                      <span>Optimizing grid…</span>
+                    </div>
+                  ) : optimizeGridError ? (
+                    <span className="text-red-500">{optimizeGridError}</span>
+                  ) : gridAdvice.optimalNumImages != null ? (
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <div className="font-medium">
+                          Ideal grid: {gridAdvice.columns ?? "?"} ×{" "}
+                          {gridAdvice.rows ?? "?"}
+                        </div>
+                        <div className="opacity-80">
+                          Target photos: {gridAdvice.optimalNumImages}
+                        </div>
+                      </div>
+                      {gridAdvice.delta != null && gridAdvice.delta !== 0 ? (
+                        <div className="flex items-center gap-3">
+                          {gridAdvice.delta > 0 ? (
+                            <>
+                              <span>
+                                Add {gridAdvice.delta} photo(s) for a perfect
+                                grid.
+                              </span>
+                              <button
+                                type="button"
+                                className="rounded-full border border-current/20 px-4 py-2 text-xs"
+                                onClick={() => {
+                                  appendModeRef.current = true;
+                                  if (fileInputRef.current)
+                                    fileInputRef.current.value = "";
+                                  fileInputRef.current?.click();
+                                }}
+                              >
+                                Add Photos
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <span>
+                                Remove {Math.abs(gridAdvice.delta)} photo(s) for
+                                a perfect grid.
+                              </span>
+                              <button
+                                type="button"
+                                className="rounded-full bg-[color:var(--theme-accent)] px-4 py-2 text-xs font-semibold text-white hover:opacity-90"
+                                onClick={() =>
+                                  removeNPhotos(Math.abs(gridAdvice.delta ?? 0))
+                                }
+                              >
+                                Remove {Math.abs(gridAdvice.delta)}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-emerald-500">
+                          You&apos;re already at a perfect grid.
+                        </span>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              )}
               <div className="h-2 w-full rounded-full bg-[color:color-mix(in_oklch,var(--theme-text)_12%,transparent)]">
                 <div
                   className="h-2 rounded-full bg-[color:var(--theme-accent)] transition-all"
@@ -506,6 +1027,9 @@ export default function CollagePage() {
               {previewError && (
                 <p className="mt-2 text-red-500">{previewError}</p>
               )}
+              {downloadError && (
+                <p className="mt-2 text-red-500">{downloadError}</p>
+              )}
             </div>
             <div className="mt-5 flex items-center gap-4">
               <button
@@ -519,9 +1043,10 @@ export default function CollagePage() {
               <button
                 type="button"
                 className="rounded-full bg-[color:var(--theme-accent)] px-6 py-3 text-base font-semibold text-white hover:opacity-90 disabled:opacity-60"
-                disabled
+                disabled={selectedImages.length < 2 || isCreatingJob}
+                onClick={() => void handleDownload()}
               >
-                Download
+                {isCreatingJob ? "Rendering…" : "Download"}
               </button>
             </div>
             <div className="mt-6 h-px w-full bg-current/20" />
