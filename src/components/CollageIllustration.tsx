@@ -72,7 +72,7 @@ export default function CollageIllustration({
         // Do not force responsive style if explicit sizing is used
       } else {
         // Make the SVG scale with its container while preserving aspect ratio
-        const existingStyle = svg.getAttribute("style") || "";
+        const existingStyle = svg.getAttribute("style") ?? "";
         const responsiveStyle = "width:100%;height:auto;display:block;";
         const mergedStyle = `${existingStyle} ${responsiveStyle}`.trim();
         svg.setAttribute("style", mergedStyle);
@@ -85,7 +85,7 @@ export default function CollageIllustration({
       return svg.outerHTML;
     };
 
-    (async () => {
+    void (async () => {
       try {
         const res = await fetch("/collage-illustration.svg", {
           cache: "force-cache",
