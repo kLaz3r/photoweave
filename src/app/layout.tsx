@@ -141,6 +141,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <meta name="google-adsense-account" content="ca-pub-9630512481401787" />
         <Script
           id="schema-org-organization"
           type="application/ld+json"
