@@ -22,7 +22,7 @@ export default function Footer() {
             Made with <span className="text-[var(--theme-accent)]">❤️</span> by
           </span>{" "}
           <Link
-            href="https://github.com/stefannasturas"
+            href="https://github.com/kLaz3r"
             className="font-semibold text-[var(--theme-accent)] hover:underline"
           >
             Stefan Nasturas
