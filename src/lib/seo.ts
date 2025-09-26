@@ -8,7 +8,7 @@ const normalizedSiteUrl = DEFAULT_SITE_URL.replace(/\/$/, "");
 export const siteMetadata = {
   name: "PhotoWeave",
   shortName: "PhotoWeave",
-  title: "PhotoWeave | AI-Powered Photo Collage Maker",
+  title: "PhotoWeave | Photo Collage Maker",
   description:
     "Turn your camera roll into stunning story-driven collages in minutes. PhotoWeave uses smart layouts, print-ready exports, and effortless customization for memorable sharing.",
   keywords: [
@@ -30,8 +30,8 @@ export const siteMetadata = {
   twitterHandle: "@PhotoWeaveApp",
   facebookPageUrl: "https://www.facebook.com/PhotoWeaveApp",
   instagramUrl: "https://www.instagram.com/photoweaveapp",
-  contactEmail: "hello@photoweave.app",
-  githubUrl: "https://github.com/stefannasturas",
+  contactEmail: "nasturasstefan@gmail.com",
+  githubUrl: "https://github.com/klaz3r",
   heroImageAlt: "PhotoWeave collage preview",
 };
 

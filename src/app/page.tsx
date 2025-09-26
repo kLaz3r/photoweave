@@ -3,6 +3,7 @@
 import { cubicBezier } from "motion";
 import { motion } from "motion/react";
 import Image from "next/image";
+import Link from "next/link";
 import { PiUserFill } from "react-icons/pi";
 import HeroBackground from "~/components/HeroBackground";
 import {
@@ -84,14 +85,16 @@ const HeroSection = () => {
             className="flex flex-col items-center gap-4 md:flex-row"
             variants={fadeUpChild}
           >
-            <motion.button
-              className="bg-accent rounded-full px-8 py-4 text-2xl font-bold text-white"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 500, damping: 32 }}
-            >
-              Start Weaving!
-            </motion.button>
+            <Link href="/collage">
+              <motion.button
+                className="bg-accent rounded-full px-8 py-4 text-2xl font-bold text-white"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ type: "spring", stiffness: 500, damping: 32 }}
+              >
+                Start Weaving!
+              </motion.button>
+            </Link>
             <motion.p className="text-lg" variants={fadeUpChild}>
               Join 10,000+ happy creators <br /> who&apos;ve woven their
               stories!
@@ -516,16 +519,18 @@ const FinalCTASection = () => {
           <br />
           <span className="text-gradient">own story?</span>
         </motion.h2>
-        <motion.button
-          type="button"
-          className="bg-accent rounded-full px-10 py-5 text-2xl font-bold text-white shadow-lg transition-colors hover:opacity-90"
-          variants={fadeUpChild}
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.98 }}
-          transition={{ type: "spring", stiffness: 500, damping: 32 }}
-        >
-          Start Weaving!
-        </motion.button>
+        <Link href="/collage">
+          <motion.button
+            type="button"
+            className="bg-accent rounded-full px-10 py-5 text-2xl font-bold text-white shadow-lg transition-colors hover:opacity-90"
+            variants={fadeUpChild}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 500, damping: 32 }}
+          >
+            Start Weaving!
+          </motion.button>
+        </Link>
       </motion.div>
     </motion.section>
   );
