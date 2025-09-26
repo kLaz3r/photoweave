@@ -58,10 +58,18 @@ export const metadata: Metadata = {
     images: openGraphImages,
   },
   icons: {
-    icon: [{ url: "/favicon.ico" }],
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon1.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon0.svg", type: "image/svg+xml" },
+    ],
     shortcut: ["/favicon.ico"],
+    apple: "/apple-icon.png",
   },
-  manifest: "/site.webmanifest",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    title: "PhotoWeave",
+  },
   robots: {
     index: true,
     follow: true,
