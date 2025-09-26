@@ -20,11 +20,6 @@ const navItems: NavItem[] = [
     href: "/collage",
     isActive: (p) => p.startsWith("/collage"),
   },
-  {
-    label: "Features",
-    href: "/features",
-    isActive: (p) => p.startsWith("/features"),
-  },
   { label: "About", href: "/about", isActive: (p) => p.startsWith("/about") },
 ];
 
