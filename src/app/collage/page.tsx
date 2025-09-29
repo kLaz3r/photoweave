@@ -33,6 +33,10 @@ function parseDpiFromResolution(value: string): number {
   return match ? parseInt(match[1]!, 10) : 150;
 }
 
+function isDevelopment(): boolean {
+  return process.env.NODE_ENV === "development";
+}
+
 function parseDimensionsFromPreset(
   preset: string,
   kind: CanvasType,
@@ -104,6 +108,7 @@ export default function CollagePage() {
   const [orderMode, setOrderMode] = useState<"chronological" | "random">(
     "chronological",
   );
+  const [debug_faces, setDebugFaces] = useState<boolean>(false);
 
   // Preview state
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -546,6 +551,7 @@ export default function CollagePage() {
       fd.append("pretrim_borders", String(false));
       fd.append("face_aware_cropping", String(false));
       fd.append("face_margin", String(0.08));
+      fd.append("debug_faces", String(debug_faces));
 
       const baseUrl =
         process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -570,6 +576,7 @@ export default function CollagePage() {
       compressedFiles,
       customHeight,
       customWidth,
+      debug_faces,
       layout,
       maintainAspect,
       resolution,
@@ -883,6 +890,7 @@ export default function CollagePage() {
     maintainAspect,
     spacing,
     selectedImages,
+    debug_faces,
   ]);
 
   function buildCommonFormDataForCreate(isPrint: boolean): FormData {
@@ -930,6 +938,7 @@ export default function CollagePage() {
     fd.append("pretrim_borders", String(false));
     fd.append("face_aware_cropping", String(false));
     fd.append("face_margin", String(0.08));
+    fd.append("debug_faces", String(debug_faces));
     return fd;
   }
 
@@ -1502,6 +1511,18 @@ export default function CollagePage() {
                 />
                 Maintain Aspect Ratio
               </label>
+
+              {isDevelopment() && (
+                <label className="flex items-center gap-3 text-sm">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-[color:var(--theme-accent)]"
+                    checked={debug_faces}
+                    onChange={(e) => setDebugFaces(e.target.checked)}
+                  />
+                  Debug Faces
+                </label>
+              )}
 
               <div className="mt-4 rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_18%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_72%,transparent)] p-3">
                 <div className="mb-2 flex items-center justify-between">
