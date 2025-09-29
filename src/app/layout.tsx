@@ -158,6 +158,11 @@ export default function RootLayout({
             __html: JSON.stringify(websiteJsonLd),
           }}
         />
+        <Script
+          src="https://umami.stefann.duckdns.org/script.js"
+          data-website-id="dc488053-f62e-443b-902c-d8743783c07d"
+          strategy="afterInteractive"
+        />
       </head>
       <body className="font-body bg-background relative w-screen max-w-screen overflow-x-clip">
         <ThemeScript />
