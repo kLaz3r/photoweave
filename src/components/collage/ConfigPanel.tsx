@@ -4,26 +4,26 @@ import type { CollageConfig } from "~/lib/collage/config";
 import { GridIcon, MasonryIcon } from "~/components/icons";
 
 const PRINT_PRESETS = [
-  "9x13cm",
-  "13x9cm",
-  "10x15cm",
-  "15x10cm",
-  "13x18cm",
-  "18x13cm",
-  "15x20cm",
-  "20x15cm",
-  "21x29.7cm A4",
-  "29.7x21cm A4",
-  "30x40cm",
-  "40x30cm",
-  "29.7x42cm A3",
-  "42x29.7cm A3",
-  "40x50cm",
-  "50x40cm",
-  "50x70cm",
-  "70x50cm",
-  "100x70cm",
-  "70x100cm",
+  { label: "9x13cm", widthMm: 90, heightMm: 130 },
+  { label: "13x9cm", widthMm: 130, heightMm: 90 },
+  { label: "10x15cm", widthMm: 100, heightMm: 150 },
+  { label: "15x10cm", widthMm: 150, heightMm: 100 },
+  { label: "13x18cm", widthMm: 130, heightMm: 180 },
+  { label: "18x13cm", widthMm: 180, heightMm: 130 },
+  { label: "15x20cm", widthMm: 150, heightMm: 200 },
+  { label: "20x15cm", widthMm: 200, heightMm: 150 },
+  { label: "21x29.7cm A4", widthMm: 210, heightMm: 297 },
+  { label: "29.7x21cm A4", widthMm: 297, heightMm: 210 },
+  { label: "30x40cm", widthMm: 300, heightMm: 400 },
+  { label: "40x30cm", widthMm: 400, heightMm: 300 },
+  { label: "29.7x42cm A3", widthMm: 297, heightMm: 420 },
+  { label: "42x29.7cm A3", widthMm: 420, heightMm: 297 },
+  { label: "40x50cm", widthMm: 400, heightMm: 500 },
+  { label: "50x40cm", widthMm: 500, heightMm: 400 },
+  { label: "50x70cm", widthMm: 500, heightMm: 700 },
+  { label: "70x50cm", widthMm: 700, heightMm: 500 },
+  { label: "100x70cm", widthMm: 1000, heightMm: 700 },
+  { label: "70x100cm", widthMm: 700, heightMm: 1000 },
 ];
 
 const DIGITAL_PRESETS = [
@@ -161,25 +161,33 @@ export function ConfigPanel({
               className="w-full appearance-none rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] px-3 py-2 pr-9 backdrop-blur-sm"
               value={
                 config.dimensionMode === "mm"
-                  ? `${config.widthMm}x${config.heightMm}`
-                  : `${config.widthPx}x${config.heightPx}`
+                  ? PRINT_PRESETS.find(
+                      (p) =>
+                        p.widthMm === config.widthMm && p.heightMm === config.heightMm
+                    )?.label ?? ""
+                  : DIGITAL_PRESETS.find(
+                      (p) => p === `${config.widthPx}x${config.heightPx}`
+                    ) ?? ""
               }
               onChange={(e) => {
-                const parts = e.target.value.split("x");
-                if (parts.length !== 2) return;
-                const v1 = parseFloat(parts[0]!);
-                const v2 = parseFloat(parts[1]!);
-                if (Number.isNaN(v1) || Number.isNaN(v2)) return;
                 if (config.dimensionMode === "mm") {
-                  update({ widthMm: v1, heightMm: v2 });
+                  const preset = PRINT_PRESETS.find((p) => p.label === e.target.value);
+                  if (preset) {
+                    update({ widthMm: preset.widthMm, heightMm: preset.heightMm });
+                  }
                 } else {
+                  const parts = e.target.value.split("x");
+                  if (parts.length !== 2) return;
+                  const v1 = parseFloat(parts[0]!);
+                  const v2 = parseFloat(parts[1]!);
+                  if (Number.isNaN(v1) || Number.isNaN(v2)) return;
                   update({ widthPx: Math.round(v1), heightPx: Math.round(v2) });
                 }
               }}
             >
               {(config.dimensionMode === "mm" ? PRINT_PRESETS : DIGITAL_PRESETS).map((p) => (
-                <option key={p} value={p}>
-                  {p}
+                <option key={typeof p === "string" ? p : p.label} value={typeof p === "string" ? p : p.label}>
+                  {typeof p === "string" ? p : p.label}
                 </option>
               ))}
             </select>
