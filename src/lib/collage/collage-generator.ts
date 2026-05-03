@@ -12,9 +12,23 @@ import { drawImageWithShadow, drawImageSimple } from "./shadow";
 import { smartFaceCrop } from "./face-crop";
 
 // Dynamic imports for face detection (not available in workers)
-let _detectFaces: ((canvas: HTMLCanvasElement | OffscreenCanvas) => Promise<FaceDetection[]>) | null = null;
-let _mergeFaceDetections: ((detections: FaceDetection[]) => FaceDetection[]) | null = null;
-let _applyFaceMargin: ((x1: number, y1: number, x2: number, y2: number, imgWidth: number, imgHeight: number, margin: number) => { x1: number; y1: number; x2: number; y2: number }) | null = null;
+let _detectFaces:
+  | ((canvas: HTMLCanvasElement | OffscreenCanvas) => Promise<FaceDetection[]>)
+  | null = null;
+let _mergeFaceDetections:
+  | ((detections: FaceDetection[]) => FaceDetection[])
+  | null = null;
+let _applyFaceMargin:
+  | ((
+      x1: number,
+      y1: number,
+      x2: number,
+      y2: number,
+      imgWidth: number,
+      imgHeight: number,
+      margin: number,
+    ) => { x1: number; y1: number; x2: number; y2: number })
+  | null = null;
 
 async function loadFaceDetection() {
   if (_detectFaces) return;
@@ -116,7 +130,15 @@ async function getOrDetectFaces(
 
   // Apply face margins
   faces = faces.map((f) => {
-    const m = _applyFaceMargin!(f.x1, f.y1, f.x2, f.y2, img.width, img.height, config.faceMargin);
+    const m = _applyFaceMargin!(
+      f.x1,
+      f.y1,
+      f.x2,
+      f.y2,
+      img.width,
+      img.height,
+      config.faceMargin,
+    );
     return { ...f, ...m };
   });
 
@@ -154,17 +176,34 @@ async function prerenderImage(
   }
 
   // Detect faces for cropping
-  const faces = await getOrDetectFaces(img.bitmap, srcCanvas, config, imageIndex);
+  const faces = await getOrDetectFaces(
+    img.bitmap,
+    srcCanvas,
+    config,
+    imageIndex,
+  );
 
   // Resize to block dimensions
   let blockCanvas: HTMLCanvasElement | OffscreenCanvas;
   if (faces.length > 0 && config.faceAwareCropping) {
     const srcBitmap = await createImageBitmap(srcCanvas);
     const cropped = smartFaceCrop(srcBitmap, faces, block.width, block.height);
-    blockCanvas = cropped ?? smartResize(srcBitmap, block.width, block.height, config.maintainAspectRatio);
+    blockCanvas =
+      cropped ??
+      smartResize(
+        srcBitmap,
+        block.width,
+        block.height,
+        config.maintainAspectRatio,
+      );
   } else {
     const srcBitmap = await createImageBitmap(srcCanvas);
-    blockCanvas = smartResize(srcBitmap, block.width, block.height, config.maintainAspectRatio);
+    blockCanvas = smartResize(
+      srcBitmap,
+      block.width,
+      block.height,
+      config.maintainAspectRatio,
+    );
   }
 
   // Debug: draw face boxes
@@ -258,7 +297,13 @@ async function compositeCollage(
           const sc = scaled.getContext("2d")!;
           sc.drawImage(img.bitmap, 0, 0, scaled.width, scaled.height);
           const bitmap = await createImageBitmap(scaled);
-          return { ...img, bitmap, width: scaled.width, height: scaled.height, aspect: scaled.width / scaled.height };
+          return {
+            ...img,
+            bitmap,
+            width: scaled.width,
+            height: scaled.height,
+            aspect: scaled.width / scaled.height,
+          };
         }),
       )
     : images;
@@ -302,7 +347,14 @@ async function compositeCollage(
         spacingPx,
       );
     } else {
-      drawImageSimple(ctx, imgBitmap, block.x, block.y, block.width, block.height);
+      drawImageSimple(
+        ctx,
+        imgBitmap,
+        block.x,
+        block.y,
+        block.width,
+        block.height,
+      );
     }
 
     onProgress?.(Math.round(((i + 1) / blocks.length) * 100));

@@ -3,7 +3,11 @@ import type { ImageBlock } from "../config";
 /**
  * Spacing pixel formula (matches Python line 445–446).
  */
-function spacingPixels(canvasWidth: number, canvasHeight: number, spacingPercent: number): number {
+function spacingPixels(
+  canvasWidth: number,
+  canvasHeight: number,
+  spacingPercent: number,
+): number {
   return Math.min(canvasWidth, canvasHeight) * (spacingPercent / 100) * 0.05;
 }
 
@@ -20,8 +24,7 @@ function evaluateLayout(
   photoCount: number,
   columns: number,
 ): number {
-  const columnWidth =
-    (canvasWidth - spacingPx * (columns + 1)) / columns;
+  const columnWidth = (canvasWidth - spacingPx * (columns + 1)) / columns;
   const photosPerColumn = Math.ceil(photoCount / columns);
   const totalSpacingPerColumn = spacingPx * (photosPerColumn + 1);
   const availableHeightPerColumn = canvasHeight - totalSpacingPerColumn;
@@ -97,9 +100,7 @@ function redistributeVerticalSpace(
 ): LayoutItem[] {
   for (let col = 0; col < columns; col++) {
     const columnItems = layout.filter((item) => {
-      const colIdx = Math.floor(
-        item.x / (item.width + spacingPx),
-      );
+      const colIdx = Math.floor(item.x / (item.width + spacingPx));
       return colIdx === col;
     });
 
@@ -150,8 +151,7 @@ export function masonryPack(
 
   const distribution = distributePhotos(images.length, columns);
 
-  const columnWidth =
-    (canvasWidth - spacingPx * (columns + 1)) / columns;
+  const columnWidth = (canvasWidth - spacingPx * (columns + 1)) / columns;
 
   // Build raw layout
   const layout: LayoutItem[] = [];
@@ -203,13 +203,19 @@ export function masonryPack(
   // Recalculate y positions after refinement (simple: evenly distribute)
   for (let col = 0; col < columns; col++) {
     const colItems = layout.filter(
-      (item) => Math.abs(item.x - (spacingPx + col * (columnWidth + spacingPx))) < 1,
+      (item) =>
+        Math.abs(item.x - (spacingPx + col * (columnWidth + spacingPx))) < 1,
     );
     colItems.sort((a, b) => (a.info.aspect > b.info.aspect ? -1 : 1));
 
     const totalSpacing = spacingPx * (colItems.length + 1);
     const availableHeight = canvasHeight - totalSpacing;
-    const scaleFactor = availableHeight / Math.max(1, colItems.reduce((s, i) => s + i.height, 0));
+    const scaleFactor =
+      availableHeight /
+      Math.max(
+        1,
+        colItems.reduce((s, i) => s + i.height, 0),
+      );
 
     let currentY = spacingPx;
     for (const item of colItems) {

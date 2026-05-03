@@ -12,19 +12,28 @@ export interface FaceDetection {
 
 interface DetectorResult {
   detections: Array<{
-    boundingBox?: { originX?: number; originY?: number; width?: number; height?: number };
+    boundingBox?: {
+      originX?: number;
+      originY?: number;
+      width?: number;
+      height?: number;
+    };
     keypoints?: Array<{ score?: number }>;
     confidence?: number[];
   }>;
 }
 
 /** Load MediaPipe FaceDetector lazily. */
-async function getDetector(): Promise<{ detect(img: HTMLCanvasElement): DetectorResult }> {
+async function getDetector(): Promise<{
+  detect(img: HTMLCanvasElement): DetectorResult;
+}> {
   const cacheKey = "__photoweave_face_detector__";
   const win = window as unknown as Record<string, unknown>;
   if (win[cacheKey]) return win[cacheKey] as ReturnType<typeof getDetector>;
 
-  const mpVision = await import(/* webpackIgnore: true */ "@mediapipe/tasks-vision");
+  const mpVision = await import(
+    /* webpackIgnore: true */ "@mediapipe/tasks-vision"
+  );
 
   const { FilesetResolver, FaceDetector: FDP } = mpVision;
 
@@ -43,7 +52,9 @@ async function getDetector(): Promise<{ detect(img: HTMLCanvasElement): Detector
   });
 
   win[cacheKey] = detector;
-  return detector as unknown as { detect(img: HTMLCanvasElement): DetectorResult };
+  return detector as unknown as {
+    detect(img: HTMLCanvasElement): DetectorResult;
+  };
 }
 
 /**
@@ -51,7 +62,9 @@ async function getDetector(): Promise<{ detect(img: HTMLCanvasElement): Detector
  * Works with both HTMLCanvasElement and OffscreenCanvas.
  * Note: Face detection is disabled in Web Workers due to MediaPipe limitations.
  */
-export async function detectFaces(canvas: HTMLCanvasElement | OffscreenCanvas): Promise<FaceDetection[]> {
+export async function detectFaces(
+  canvas: HTMLCanvasElement | OffscreenCanvas,
+): Promise<FaceDetection[]> {
   // Skip on server-side rendering (not in browser or worker)
   if (typeof window === "undefined" && typeof self === "undefined") return [];
 
@@ -78,7 +91,9 @@ export async function detectFaces(canvas: HTMLCanvasElement | OffscreenCanvas): 
  * Merge overlapping face detections and remove duplicates.
  * Port of Python _merge_face_detections (lines 1412–1449).
  */
-export function mergeFaceDetections(detections: FaceDetection[]): FaceDetection[] {
+export function mergeFaceDetections(
+  detections: FaceDetection[],
+): FaceDetection[] {
   if (!detections.length) return [];
 
   const sorted = [...detections].sort((a, b) => b.score - a.score);

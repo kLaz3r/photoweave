@@ -7,8 +7,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CollageConfig, LoadedImage } from "~/lib/collage/config";
 import { DEFAULT_COLLAGE_CONFIG } from "~/lib/collage/config";
 import { generatePreview } from "~/lib/collage/collage-generator";
-import { generateCollageWithWorker, downloadCanvas } from "~/lib/collage/worker-bridge";
-import { calculateOptimalGrid, type GridInfo } from "~/lib/collage/layouts/grid";
+import {
+  generateCollageWithWorker,
+  downloadCanvas,
+} from "~/lib/collage/worker-bridge";
+import {
+  calculateOptimalGrid,
+  type GridInfo,
+} from "~/lib/collage/layouts/grid";
 
 function calcCanvasPx(config: CollageConfig): { w: number; h: number } {
   if (config.dimensionMode === "mm") {
@@ -23,7 +29,9 @@ function calcCanvasPx(config: CollageConfig): { w: number; h: number } {
 export function useCollage() {
   const [images, setImages] = useState<LoadedImage[]>([]);
   const [config, setConfig] = useState<CollageConfig>(DEFAULT_COLLAGE_CONFIG);
-  const [previewCanvas, setPreviewCanvas] = useState<HTMLCanvasElement | null>(null);
+  const [previewCanvas, setPreviewCanvas] = useState<HTMLCanvasElement | null>(
+    null,
+  );
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [exportBitmap, setExportBitmap] = useState<ImageBitmap | null>(null);
@@ -136,7 +144,11 @@ export function useCollage() {
 
       try {
         // Use worker for full-res generation
-        const bitmap = await generateCollageWithWorker(images, config, setProgress);
+        const bitmap = await generateCollageWithWorker(
+          images,
+          config,
+          setProgress,
+        );
         setExportBitmap(bitmap);
 
         // Render to canvas for download

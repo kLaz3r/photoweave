@@ -26,8 +26,11 @@ export default function CollagePage() {
     exportCollage,
   } = useCollage();
 
-  const { isLoading: faceLoading, isReady: faceReady, ensureLoaded } =
-    useFaceDetector();
+  const {
+    isLoading: faceLoading,
+    isReady: faceReady,
+    ensureLoaded,
+  } = useFaceDetector();
 
   const addPhotosInputRef = useRef<HTMLInputElement>(null);
 

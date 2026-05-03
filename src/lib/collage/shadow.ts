@@ -14,7 +14,10 @@ export function drawImageWithShadow(
   // Shadow parameters derived from spacing (same formula as Python lines 972–976)
   const offset = Math.max(1, Math.round(spacingPixels * 0.12));
   const blurRadius = Math.max(3, Math.round(spacingPixels * 0.6));
-  const borderThickness = Math.min(12, Math.max(2, Math.round(spacingPixels * 0.14)));
+  const borderThickness = Math.min(
+    12,
+    Math.max(2, Math.round(spacingPixels * 0.14)),
+  );
 
   // Save context
   ctx.save();
@@ -64,7 +67,13 @@ export function drawImageSimple(
   ctx.drawImage(img, x, y, w, h);
 }
 
-function _rect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+function _rect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
   ctx.rect(x, y, w, h);
 }
 

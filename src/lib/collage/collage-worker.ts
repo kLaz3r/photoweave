@@ -23,7 +23,7 @@ self.onmessage = async (e: MessageEvent<WorkerInput>) => {
 
     // postMessage(signal, { transfer }) form — transfer bitmaps zero-copy
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(self as any).postMessage(
+    (self as any).postMessage(
       { type: "done", imageBitmap: bitmap },
       { transfer: [bitmap] },
     );

@@ -121,7 +121,9 @@ export function ConfigPanel({
       <form className="space-y-5">
         {/* Dimension mode */}
         <div>
-          <label className="mb-1 block text-sm opacity-80">Dimension Mode</label>
+          <label className="mb-1 block text-sm opacity-80">
+            Dimension Mode
+          </label>
           <div className="grid grid-cols-2 gap-2">
             {(["px", "mm"] as const).map((mode) => (
               <button
@@ -129,9 +131,19 @@ export function ConfigPanel({
                 type="button"
                 onClick={() => {
                   if (mode === "mm") {
-                    update({ dimensionMode: "mm", widthMm: 304.8, heightMm: 457.2, dpi: 150 });
+                    update({
+                      dimensionMode: "mm",
+                      widthMm: 304.8,
+                      heightMm: 457.2,
+                      dpi: 150,
+                    });
                   } else {
-                    update({ dimensionMode: "px", widthPx: 1920, heightPx: 1080, dpi: 96 });
+                    update({
+                      dimensionMode: "px",
+                      widthPx: 1920,
+                      heightPx: 1080,
+                      dpi: 96,
+                    });
                   }
                 }}
                 className={[
@@ -161,19 +173,25 @@ export function ConfigPanel({
               className="w-full appearance-none rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_70%,transparent)] px-3 py-2 pr-9 backdrop-blur-sm"
               value={
                 config.dimensionMode === "mm"
-                  ? PRINT_PRESETS.find(
+                  ? (PRINT_PRESETS.find(
                       (p) =>
-                        p.widthMm === config.widthMm && p.heightMm === config.heightMm
-                    )?.label ?? ""
-                  : DIGITAL_PRESETS.find(
-                      (p) => p === `${config.widthPx}x${config.heightPx}`
-                    ) ?? ""
+                        p.widthMm === config.widthMm &&
+                        p.heightMm === config.heightMm,
+                    )?.label ?? "")
+                  : (DIGITAL_PRESETS.find(
+                      (p) => p === `${config.widthPx}x${config.heightPx}`,
+                    ) ?? "")
               }
               onChange={(e) => {
                 if (config.dimensionMode === "mm") {
-                  const preset = PRINT_PRESETS.find((p) => p.label === e.target.value);
+                  const preset = PRINT_PRESETS.find(
+                    (p) => p.label === e.target.value,
+                  );
                   if (preset) {
-                    update({ widthMm: preset.widthMm, heightMm: preset.heightMm });
+                    update({
+                      widthMm: preset.widthMm,
+                      heightMm: preset.heightMm,
+                    });
                   }
                 } else {
                   const parts = e.target.value.split("x");
@@ -185,13 +203,21 @@ export function ConfigPanel({
                 }
               }}
             >
-              {(config.dimensionMode === "mm" ? PRINT_PRESETS : DIGITAL_PRESETS).map((p) => (
-                <option key={typeof p === "string" ? p : p.label} value={typeof p === "string" ? p : p.label}>
+              {(config.dimensionMode === "mm"
+                ? PRINT_PRESETS
+                : DIGITAL_PRESETS
+              ).map((p) => (
+                <option
+                  key={typeof p === "string" ? p : p.label}
+                  value={typeof p === "string" ? p : p.label}
+                >
                   {typeof p === "string" ? p : p.label}
                 </option>
               ))}
             </select>
-            <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm opacity-60">▾</span>
+            <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm opacity-60">
+              ▾
+            </span>
           </div>
         </div>
 
@@ -208,9 +234,7 @@ export function ConfigPanel({
             unit={config.dimensionMode === "mm" ? "mm" : "px"}
             onChange={(v) =>
               update(
-                config.dimensionMode === "mm"
-                  ? { widthMm: v }
-                  : { widthPx: v },
+                config.dimensionMode === "mm" ? { widthMm: v } : { widthPx: v },
               )
             }
           />
@@ -249,7 +273,9 @@ export function ConfigPanel({
                   </option>
                 ))}
               </select>
-              <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm opacity-60">▾</span>
+              <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm opacity-60">
+                ▾
+              </span>
             </div>
           </div>
         )}
@@ -340,7 +366,9 @@ export function ConfigPanel({
             <input
               type="color"
               value={config.backgroundColor.slice(0, 7)}
-              onChange={(e) => update({ backgroundColor: e.target.value + "ff" })}
+              onChange={(e) =>
+                update({ backgroundColor: e.target.value + "ff" })
+              }
               className="h-10 w-14 cursor-pointer rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)]"
             />
             <input
@@ -409,7 +437,9 @@ export function ConfigPanel({
               <div>
                 <div className="mb-1 flex items-center justify-between">
                   <span className="text-xs opacity-70">Face Margin</span>
-                  <span className="text-xs opacity-50">{config.faceMargin}</span>
+                  <span className="text-xs opacity-50">
+                    {config.faceMargin}
+                  </span>
                 </div>
                 <input
                   type="range"

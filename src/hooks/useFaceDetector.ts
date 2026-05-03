@@ -26,7 +26,8 @@ export function useFaceDetector() {
       await detectFaces(warmup);
       setState("ready");
     } catch (err) {
-      errorRef.current = err instanceof Error ? err.message : "Face detector failed";
+      errorRef.current =
+        err instanceof Error ? err.message : "Face detector failed";
       setState("error");
     }
   }, [state]);

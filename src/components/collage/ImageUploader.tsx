@@ -82,7 +82,14 @@ export function ImageUploader({
             : "border-[color:color-mix(in_oklch,var(--theme-text)_25%,transparent)]",
         ].join(" ")}
       >
-        <input ref={inputRef} type="file" multiple accept="image/*" className="hidden" onChange={handlePickFiles} />
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          accept="image/*"
+          className="hidden"
+          onChange={handlePickFiles}
+        />
         <input {...getInputProps()} />
         <span className="text-center text-lg opacity-80">
           {isDragActive ? (
@@ -134,7 +141,16 @@ export function ImageUploader({
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-current/15 px-3 py-1.5 text-xs font-medium transition hover:bg-white/5"
                 onClick={onShuffle}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <polyline points="16 3 21 3 21 8" />
                   <line x1="4" y1="20" x2="21" y2="3" />
                   <polyline points="21 16 21 21 16 21" />
@@ -150,7 +166,16 @@ export function ImageUploader({
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-current/15 px-3 py-1.5 text-xs font-medium transition hover:bg-white/5"
                 onClick={onSortChronologically}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <line x1="3" y1="6" x2="21" y2="6" />
                   <line x1="3" y1="12" x2="21" y2="12" />
                   <line x1="3" y1="18" x2="15" y2="18" />
@@ -160,30 +185,30 @@ export function ImageUploader({
             </div>
           </div>
           <div className="grid grid-cols-4 gap-2">
-          {images.map((img) => (
-            <div
-              key={img.id}
-              className="relative aspect-square overflow-hidden rounded-md bg-[color:color-mix(in_oklch,var(--theme-text)_12%,transparent)]"
-            >
-              <Image
-                src={img.previewUrl}
-                alt="preview"
-                fill
-                sizes="80px"
-                className="object-cover"
-                unoptimized
-              />
-              <button
-                type="button"
-                aria-label="Remove"
-                className="absolute top-1 right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-xs text-white hover:bg-black/90"
-                onClick={() => onRemove(img.id)}
+            {images.map((img) => (
+              <div
+                key={img.id}
+                className="relative aspect-square overflow-hidden rounded-md bg-[color:color-mix(in_oklch,var(--theme-text)_12%,transparent)]"
               >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
+                <Image
+                  src={img.previewUrl}
+                  alt="preview"
+                  fill
+                  sizes="80px"
+                  className="object-cover"
+                  unoptimized
+                />
+                <button
+                  type="button"
+                  aria-label="Remove"
+                  className="absolute top-1 right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-xs text-white hover:bg-black/90"
+                  onClick={() => onRemove(img.id)}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

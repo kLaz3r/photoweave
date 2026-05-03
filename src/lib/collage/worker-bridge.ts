@@ -9,10 +9,9 @@ import { generateCollage } from "./collage-generator";
 /** Load and return a new Worker instance. */
 function createWorker(): Worker | null {
   try {
-    return new Worker(
-      new URL("./collage-worker.ts", import.meta.url),
-      { type: "module" },
-    );
+    return new Worker(new URL("./collage-worker.ts", import.meta.url), {
+      type: "module",
+    });
   } catch {
     return null;
   }
@@ -48,7 +47,14 @@ export function generateCollageWithWorker(
       return;
     }
 
-    worker.onmessage = (e: MessageEvent<{ type?: string; percent?: number; imageBitmap?: ImageBitmap; message?: string }>) => {
+    worker.onmessage = (
+      e: MessageEvent<{
+        type?: string;
+        percent?: number;
+        imageBitmap?: ImageBitmap;
+        message?: string;
+      }>,
+    ) => {
       const { type, percent, imageBitmap, message } = e.data ?? {};
       if (type === "progress") {
         onProgress?.(typeof percent === "number" ? percent : 0);
@@ -56,7 +62,9 @@ export function generateCollageWithWorker(
         resolve(imageBitmap);
         worker.terminate();
       } else if (type === "error") {
-        reject(new Error(typeof message === "string" ? message : "Worker error"));
+        reject(
+          new Error(typeof message === "string" ? message : "Worker error"),
+        );
         worker.terminate();
       }
     };
@@ -69,7 +77,11 @@ export function generateCollageWithWorker(
     // Send images to worker (bitmaps are copied, not transferred)
     // We can't transfer because bitmaps are still needed in main thread for preview
     // Disable face detection in worker since MediaPipe doesn't support worker context
-    const workerConfig = { ...config, faceAwareCropping: false, debugFaces: false };
+    const workerConfig = {
+      ...config,
+      faceAwareCropping: false,
+      debugFaces: false,
+    };
     worker.postMessage({ images, config: workerConfig });
   });
 }
