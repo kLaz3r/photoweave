@@ -100,6 +100,25 @@ export function useCollage() {
     });
   }, []);
 
+  const shuffleImages = useCallback(() => {
+    setImages((prev) => {
+      const arr = [...prev];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = arr[i]!;
+        arr[i] = arr[j]!;
+        arr[j] = tmp;
+      }
+      return arr;
+    });
+  }, []);
+
+  const sortImagesChronologically = useCallback(() => {
+    setImages((prev) =>
+      [...prev].sort((a, b) => b.file.lastModified - a.file.lastModified),
+    );
+  }, []);
+
   const clearImages = useCallback(() => {
     setImages((prev) => {
       prev.forEach((img) => img.bitmap.close());
@@ -153,6 +172,8 @@ export function useCollage() {
     addImages,
     removeImage,
     reorderImages,
+    shuffleImages,
+    sortImagesChronologically,
     clearImages,
     exportCollage,
   };

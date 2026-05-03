@@ -21,6 +21,8 @@ export default function CollagePage() {
     addImages,
     removeImage,
     clearImages,
+    shuffleImages,
+    sortImagesChronologically,
     exportCollage,
   } = useCollage();
 
@@ -75,6 +77,8 @@ export default function CollagePage() {
             onFiles={(files) => void addImages(files)}
             onRemove={(id) => removeImage(Number(id))}
             onClear={clearImages}
+            onShuffle={shuffleImages}
+            onSortChronologically={sortImagesChronologically}
           />
 
           {/* Middle column: Preview + export */}

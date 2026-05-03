@@ -9,6 +9,8 @@ interface ImageUploaderProps {
   onFiles: (files: File[]) => void;
   onRemove: (id: string) => void;
   onClear: () => void;
+  onShuffle: () => void;
+  onSortChronologically: () => void;
 }
 
 export function ImageUploader({
@@ -16,6 +18,8 @@ export function ImageUploader({
   onFiles,
   onRemove,
   onClear,
+  onShuffle,
+  onSortChronologically,
 }: ImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const appendModeRef = useRef(false);
@@ -119,7 +123,43 @@ export function ImageUploader({
 
       {/* Thumbnails */}
       {images.length > 0 && (
-        <div className="grid grid-cols-4 gap-2">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs opacity-60">Image Order</span>
+            <div className="flex flex-1 gap-2">
+              <button
+                type="button"
+                aria-label="Random order"
+                title="Shuffle images in random order"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-current/15 px-3 py-1.5 text-xs font-medium transition hover:bg-white/5"
+                onClick={onShuffle}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 3 21 3 21 8" />
+                  <line x1="4" y1="20" x2="21" y2="3" />
+                  <polyline points="21 16 21 21 16 21" />
+                  <line x1="15" y1="15" x2="21" y2="21" />
+                  <line x1="4" y1="4" x2="9" y2="9" />
+                </svg>
+                Random
+              </button>
+              <button
+                type="button"
+                aria-label="Chronological order"
+                title="Sort images by date taken"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-current/15 px-3 py-1.5 text-xs font-medium transition hover:bg-white/5"
+                onClick={onSortChronologically}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="18" x2="15" y2="18" />
+                </svg>
+                By Date
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
           {images.map((img) => (
             <div
               key={img.id}
@@ -143,6 +183,7 @@ export function ImageUploader({
               </button>
             </div>
           ))}
+        </div>
         </div>
       )}
 
