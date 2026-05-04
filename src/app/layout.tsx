@@ -159,9 +159,22 @@ export default function RootLayout({
           }}
         />
         <Script
-          src="https://umami.stefann.duckdns.org/script.js"
-          data-website-id="dc488053-f62e-443b-902c-d8743783c07d"
+          id="matomo-tracking"
           strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              var _paq = window._paq = window._paq || [];
+              _paq.push(['trackPageView']);
+              _paq.push(['enableLinkTracking']);
+              (function() {
+                var u="//matomo.stefann.duckdns.org/";
+                _paq.push(['setTrackerUrl', u+'matomo.php']);
+                _paq.push(['setSiteId', '2']);
+                var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+                g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+              })();
+            `,
+          }}
         />
       </head>
       <body className="font-body bg-background relative w-screen max-w-screen overflow-x-clip">
