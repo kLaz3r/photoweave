@@ -32,6 +32,7 @@ export function useCollage() {
   const [previewCanvas, setPreviewCanvas] = useState<HTMLCanvasElement | null>(
     null,
   );
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [exportBitmap, setExportBitmap] = useState<ImageBitmap | null>(null);
@@ -49,12 +50,15 @@ export function useCollage() {
     if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
 
     previewTimerRef.current = setTimeout(() => {
+      setIsPreviewLoading(true);
       void (async () => {
         try {
           const canvas = await generatePreview(images, config);
           setPreviewCanvas(canvas);
         } catch {
           // Silently ignore preview errors
+        } finally {
+          setIsPreviewLoading(false);
         }
       })();
     }, 300);
@@ -177,6 +181,7 @@ export function useCollage() {
     config,
     setConfig,
     previewCanvas,
+    isPreviewLoading,
     isGenerating,
     progress,
     gridInfo,

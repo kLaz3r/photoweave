@@ -15,6 +15,7 @@ export default function CollagePage() {
     config,
     setConfig,
     previewCanvas,
+    isPreviewLoading,
     isGenerating,
     progress,
     gridInfo,
@@ -92,6 +93,7 @@ export default function CollagePage() {
 
             <CollageCanvas
               canvas={previewCanvas}
+              isPreviewLoading={isPreviewLoading}
               isGenerating={isGenerating && !previewCanvas}
               progress={progress}
             />

@@ -133,9 +133,9 @@ export function ConfigPanel({
                   if (mode === "mm") {
                     update({
                       dimensionMode: "mm",
-                      widthMm: 304.8,
-                      heightMm: 457.2,
-                      dpi: 150,
+                      widthMm: 400,
+                      heightMm: 300,
+                      dpi: 300,
                     });
                   } else {
                     update({
