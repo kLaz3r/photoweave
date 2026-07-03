@@ -67,15 +67,11 @@ function calculateOptimalColumns(
     1,
     Math.floor(Math.sqrt(photoCount * (canvasWidth / canvasHeight))),
   );
-  const maxColumns = Math.min(
-    photoCount,
-    Math.max(1, Math.floor(canvasWidth / 200)),
-  );
 
   let bestColumns = minColumns;
   let bestScore = Infinity;
 
-  for (let cols = minColumns; cols <= maxColumns; cols++) {
+  for (let cols = minColumns; cols <= photoCount; cols++) {
     const score = evaluateLayout(
       canvasWidth,
       canvasHeight,
