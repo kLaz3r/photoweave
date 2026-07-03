@@ -25,6 +25,11 @@ export default function CollagePage() {
     shuffleImages,
     sortImagesChronologically,
     exportCollage,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    reorderImages,
   } = useCollage();
 
   const {
@@ -84,11 +89,31 @@ export default function CollagePage() {
     [removeImage],
   );
 
+  const handleReorder = useCallback(
+    (from: number, to: number) => reorderImages(from, to),
+    [reorderImages],
+  );
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if (mod && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [undo, redo]);
+
   return (
-    <main className="text-text container mx-auto mt-[96px] mb-16 px-4">
-      <section className="relative rounded-[28px] border border-[color:color-mix(in_oklch,var(--theme-text)_10%,transparent)] bg-[linear-gradient(180deg,color-mix(in_oklch,var(--theme-background)_60%,transparent),color-mix(in_oklch,var(--theme-background)_30%,transparent))] p-6 shadow-2xl backdrop-blur-2xl md:p-8 lg:p-10">
+    <main className="text-text container mx-auto mt-16 mb-16 px-2 sm:mt-24 sm:mb-16 sm:px-4">
+      <section className="relative rounded-[20px] border border-[color:color-mix(in_oklch,var(--theme-text)_10%,transparent)] bg-[linear-gradient(180deg,color-mix(in_oklch,var(--theme-background)_60%,transparent),color-mix(in_oklch,var(--theme-background)_30%,transparent))] p-4 shadow-2xl backdrop-blur-2xl sm:rounded-[28px] sm:p-6 md:p-8 lg:p-10">
         <div
-          className="absolute inset-0 -z-10 rounded-[28px] bg-[radial-gradient(1200px_600px_at_10%_-10%,rgba(168,149,255,0.28),rgba(255,255,255,0)_60%),radial-gradient(1200px_600px_at_110%_110%,rgba(255,160,140,0.35),rgba(255,255,255,0)_60%)]"
+          className="absolute inset-0 -z-10 rounded-[20px] bg-[radial-gradient(1200px_600px_at_10%_-10%,rgba(168,149,255,0.28),rgba(255,255,255,0)_60%),radial-gradient(1200px_600px_at_110%_110%,rgba(255,160,140,0.35),rgba(255,255,255,0)_60%)] sm:rounded-[28px]"
           aria-hidden
         />
 
@@ -106,7 +131,7 @@ export default function CollagePage() {
           }}
         />
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-12">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:grid-cols-3 lg:gap-12">
           {/* Left column: Image uploader */}
           <ImageUploader
             images={thumbnails}
@@ -115,11 +140,12 @@ export default function CollagePage() {
             onClear={clearImages}
             onShuffle={shuffleImages}
             onSortChronologically={sortImagesChronologically}
+            onReorder={handleReorder}
           />
 
           {/* Middle column: Preview + export */}
-          <div className="flex flex-col gap-5">
-            <h2 className="font-display text-2xl md:text-3xl">
+          <div className="flex flex-col gap-4 sm:gap-5">
+            <h2 className="font-display text-xl sm:text-2xl md:text-3xl">
               Collage Preview
             </h2>
 
@@ -161,13 +187,60 @@ export default function CollagePage() {
             )}
 
             {/* Action buttons */}
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2 sm:gap-3">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={!canUndo}
+                  aria-label="Undo"
+                  title="Undo (Ctrl+Z)"
+                  className="flex flex-1 items-center justify-center gap-1 rounded-full border border-current/20 px-3 py-1.5 text-xs transition enabled:hover:bg-white/5 disabled:opacity-30 sm:px-4 sm:py-2 sm:text-sm"
+                  onClick={() => undo()}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="1 4 1 10 7 10" />
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                  </svg>
+                  Undo
+                </button>
+                <button
+                  type="button"
+                  disabled={!canRedo}
+                  aria-label="Redo"
+                  title="Redo (Ctrl+Y)"
+                  className="flex flex-1 items-center justify-center gap-1 rounded-full border border-current/20 px-3 py-1.5 text-xs transition enabled:hover:bg-white/5 disabled:opacity-30 sm:px-4 sm:py-2 sm:text-sm"
+                  onClick={() => redo()}
+                >
+                  Redo
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="23 4 23 10 17 10" />
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                  </svg>
+                </button>
+              </div>
               {previewCanvas && (
                 <button
                   type="button"
-                  className="w-full rounded-full border border-current/20 px-6 py-3 text-base transition hover:bg-white/5"
+                  className="w-full rounded-full border border-current/20 px-4 py-2 text-sm transition hover:bg-white/5 sm:px-6 sm:py-3 sm:text-base"
                   onClick={() => {
-                    // Force re-render of preview
                     setConfig({ ...config });
                   }}
                 >
@@ -183,7 +256,7 @@ export default function CollagePage() {
             </div>
 
             <div className="h-px w-full bg-current/10" />
-            <p className="text-center text-sm opacity-50">
+            <p className="text-center text-xs opacity-50 sm:text-sm">
               All processing happens locally in your browser
             </p>
           </div>

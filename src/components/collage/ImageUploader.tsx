@@ -3,6 +3,21 @@
 import Image from "next/image";
 import { memo, useCallback, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
+import {
+  DndContext,
+  type DragEndEvent,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface ImageUploaderProps {
   images: Array<{ previewUrl: string; id: string }>;
@@ -11,6 +26,82 @@ interface ImageUploaderProps {
   onClear: () => void;
   onShuffle: () => void;
   onSortChronologically: () => void;
+  onReorder: (from: number, to: number) => void;
+}
+
+function SortableThumbnail({
+  id,
+  previewUrl,
+  onRemove,
+}: {
+  id: string;
+  previewUrl: string;
+  onRemove: (id: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="relative aspect-square overflow-hidden rounded-md bg-[color:color-mix(in_oklch,var(--theme-text)_12%,transparent)]"
+    >
+      <button
+        type="button"
+        className="absolute top-0 left-0 z-10 flex h-5 w-5 items-center justify-center rounded-br-md bg-black/50 text-white/60 transition hover:text-white/90"
+        aria-label="Drag to reorder"
+        {...attributes}
+        {...listeners}
+      >
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <circle cx="8" cy="4" r="2" />
+          <circle cx="16" cy="4" r="2" />
+          <circle cx="8" cy="12" r="2" />
+          <circle cx="16" cy="12" r="2" />
+          <circle cx="8" cy="20" r="2" />
+          <circle cx="16" cy="20" r="2" />
+        </svg>
+      </button>
+      <Image
+        src={previewUrl}
+        alt="preview"
+        fill
+        sizes="80px"
+        className="object-cover"
+        unoptimized
+      />
+      <button
+        type="button"
+        aria-label={`Remove image ${id}`}
+        className="absolute top-1 right-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-xs text-white hover:bg-black/90"
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove(id);
+        }}
+      >
+        &times;
+      </button>
+    </div>
+  );
 }
 
 export const ImageUploader = memo(function ImageUploader({
@@ -20,10 +111,18 @@ export const ImageUploader = memo(function ImageUploader({
   onClear,
   onShuffle,
   onSortChronologically,
+  onReorder,
 }: ImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const appendModeRef = useRef(false);
   const [confirmClear, setConfirmClear] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 5 },
+    }),
+  );
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -67,11 +166,26 @@ export const ImageUploader = memo(function ImageUploader({
     inputRef.current?.click();
   };
 
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      const oldIndex = images.findIndex((img) => img.id === active.id);
+      const newIndex = images.findIndex((img) => img.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      onReorder(oldIndex, newIndex);
+    },
+    [images, onReorder],
+  );
+
   const totalMB = images.length > 0 ? images.length * 0.5 : 0;
+  const sortableIds = images.map((img) => img.id);
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="font-display text-2xl md:text-3xl">File Upload</h2>
+      <h2 className="font-display text-xl sm:text-2xl md:text-3xl">File Upload</h2>
 
       {/* Drop zone */}
       <div
@@ -185,31 +299,24 @@ export const ImageUploader = memo(function ImageUploader({
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-2">
-            {images.map((img) => (
-              <div
-                key={img.id}
-                className="relative aspect-square overflow-hidden rounded-md bg-[color:color-mix(in_oklch,var(--theme-text)_12%,transparent)]"
-              >
-                <Image
-                  src={img.previewUrl}
-                  alt="preview"
-                  fill
-                  sizes="80px"
-                  className="object-cover"
-                  unoptimized
-                />
-                <button
-                  type="button"
-                  aria-label={`Remove image ${img.id}`}
-                  className="absolute top-1 right-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-xs text-white hover:bg-black/90"
-                  onClick={() => onRemove(img.id)}
-                >
-                  ×
-                </button>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-2">
+                {images.map((img) => (
+                  <SortableThumbnail
+                    key={img.id}
+                    id={img.id}
+                    previewUrl={img.previewUrl}
+                    onRemove={onRemove}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         </div>
       )}
 
@@ -246,7 +353,7 @@ export const ImageUploader = memo(function ImageUploader({
               className="w-full rounded-full border border-current/20 px-6 py-2 text-base"
               onClick={() => setConfirmClear(true)}
             >
-              × Clear All
+              &times; Clear All
             </button>
           )}
         </div>

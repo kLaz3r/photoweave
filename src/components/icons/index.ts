@@ -1,8 +1,11 @@
 export { default as CollageIllustration } from "../CollageIllustration";
+export { CenteredIcon } from "./CenteredIcon";
 export { CreateShareIcon } from "./CreateShareIcon";
 export { DigitalIcon } from "./DigitalIcon";
 export { GridIcon } from "./GridIcon";
 export { MasonryIcon } from "./MasonryIcon";
 export { PrintIcon } from "./PrintIcon";
+export { ScatteredIcon } from "./ScatteredIcon";
 export { ScreenToFrameIcon } from "./ScreenToFrameIcon";
 export { SmartLayoutsIcon } from "./SmartLayoutsIcon";
+export { SpiralIcon } from "./SpiralIcon";

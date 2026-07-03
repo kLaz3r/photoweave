@@ -16,6 +16,12 @@ import {
   type GridInfo,
 } from "~/lib/collage/layouts/grid";
 import toast from "react-hot-toast";
+import { useUndoRedo } from "~/hooks/useUndoRedo";
+
+interface CollageState {
+  images: LoadedImage[];
+  config: CollageConfig;
+}
 
 export function useCollage() {
   const [images, setImages] = useState<LoadedImage[]>([]);
@@ -28,6 +34,53 @@ export function useCollage() {
   const [progress, setProgress] = useState(0);
   const [exportBitmap, setExportBitmap] = useState<ImageBitmap | null>(null);
   const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const stateRef = useRef<CollageState>({
+    images: [],
+    config: DEFAULT_COLLAGE_CONFIG,
+  });
+
+  const {
+    canUndo,
+    canRedo,
+    pushConfigChange,
+    pushAction,
+    undo,
+    redo,
+  } = useUndoRedo<CollageState>({
+    maxHistory: 50,
+    debounceMs: 500,
+  });
+
+  const restoreState = useCallback(
+    (state: CollageState) => {
+      stateRef.current = state;
+      setImages(state.images);
+      setConfig(state.config);
+    },
+    [],
+  );
+
+  const handleUndo = useCallback(() => {
+    const current = stateRef.current;
+    const restored = undo(current);
+    if (restored) {
+      restoreState(restored);
+    }
+  }, [undo, restoreState]);
+
+  const handleRedo = useCallback(() => {
+    const current = stateRef.current;
+    const restored = redo(current);
+    if (restored) {
+      restoreState(restored);
+    }
+  }, [redo, restoreState]);
+
+  // Sync stateRef whenever images or config change
+  useEffect(() => {
+    stateRef.current = { images, config };
+  }, [images, config]);
 
   // Derive grid optimization info
   const [gridInfo, setGridInfo] = useState<GridInfo | null>(null);
@@ -48,7 +101,9 @@ export function useCollage() {
           setPreviewCanvas(canvas);
         } catch (err) {
           console.error("Preview failed:", err);
-          toast.error("Failed to generate preview. Try adjusting your settings.");
+          toast.error(
+            "Failed to generate preview. Try adjusting your settings.",
+          );
         } finally {
           setIsPreviewLoading(false);
         }
@@ -78,46 +133,68 @@ export function useCollage() {
         images.length,
         dimPx.w,
         dimPx.h,
-      config.spacing,
-    ),
-  );
-  }, [images.length, config.layoutStyle, config.spacing, config.dimensionMode, config.widthMm, config.heightMm, config.widthPx, config.heightPx, config.dpi]);
-
-  // Load images from File objects
-  const addImages = useCallback(async (files: File[]) => {
-    const newLoaded: LoadedImage[] = await Promise.all(
-      files.map(async (file) => {
-        const bitmap = await createImageBitmap(file);
-        return {
-          bitmap,
-          width: bitmap.width,
-          height: bitmap.height,
-          aspect: bitmap.width / bitmap.height,
-          file,
-        };
-      }),
+        config.spacing,
+      ),
     );
-    setImages((prev) => [...prev, ...newLoaded]);
-  }, []);
+  }, [
+    images.length,
+    config.layoutStyle,
+    config.spacing,
+    config.dimensionMode,
+    config.widthMm,
+    config.heightMm,
+    config.widthPx,
+    config.heightPx,
+    config.dpi,
+  ]);
 
-  const removeImage = useCallback((index: number) => {
-    setImages((prev) => {
-      const removed = prev[index];
-      if (removed) removed.bitmap.close();
-      return prev.filter((_, i) => i !== index);
-    });
-  }, []);
+  const addImages = useCallback(
+    async (files: File[]) => {
+      pushAction(stateRef.current);
+      const newLoaded: LoadedImage[] = await Promise.all(
+        files.map(async (file) => {
+          const bitmap = await createImageBitmap(file);
+          return {
+            bitmap,
+            width: bitmap.width,
+            height: bitmap.height,
+            aspect: bitmap.width / bitmap.height,
+            file,
+          };
+        }),
+      );
+      setImages((prev) => [...prev, ...newLoaded]);
+    },
+    [pushAction],
+  );
 
-  const reorderImages = useCallback((from: number, to: number) => {
-    setImages((prev) => {
-      const arr = [...prev];
-      const [moved] = arr.splice(from, 1);
-      if (moved !== undefined) arr.splice(to, 0, moved);
-      return arr;
-    });
-  }, []);
+  const removeImage = useCallback(
+    (index: number) => {
+      pushAction(stateRef.current);
+      setImages((prev) => {
+        const removed = prev[index];
+        if (removed) removed.bitmap.close();
+        return prev.filter((_, i) => i !== index);
+      });
+    },
+    [pushAction],
+  );
+
+  const reorderImages = useCallback(
+    (from: number, to: number) => {
+      pushAction(stateRef.current);
+      setImages((prev) => {
+        const arr = [...prev];
+        const [moved] = arr.splice(from, 1);
+        if (moved !== undefined) arr.splice(to, 0, moved);
+        return arr;
+      });
+    },
+    [pushAction],
+  );
 
   const shuffleImages = useCallback(() => {
+    pushAction(stateRef.current);
     setImages((prev) => {
       const arr = [...prev];
       for (let i = arr.length - 1; i > 0; i--) {
@@ -128,20 +205,30 @@ export function useCollage() {
       }
       return arr;
     });
-  }, []);
+  }, [pushAction]);
 
   const sortImagesChronologically = useCallback(() => {
+    pushAction(stateRef.current);
     setImages((prev) =>
       [...prev].sort((a, b) => b.file.lastModified - a.file.lastModified),
     );
-  }, []);
+  }, [pushAction]);
 
   const clearImages = useCallback(() => {
+    pushAction(stateRef.current);
     setImages((prev) => {
       prev.forEach((img) => img.bitmap.close());
       return [];
     });
-  }, []);
+  }, [pushAction]);
+
+  const setConfigWithHistory = useCallback(
+    (next: CollageConfig) => {
+      pushConfigChange(stateRef.current);
+      setConfig(next);
+    },
+    [pushConfigChange],
+  );
 
   // Full-resolution export using Worker
   const exportCollage = useCallback(
@@ -179,7 +266,9 @@ export function useCollage() {
       } catch (err) {
         console.error("Export failed:", err);
         toast.error(
-          err instanceof Error ? err.message : "Export failed. Please try again.",
+          err instanceof Error
+            ? err.message
+            : "Export failed. Please try again.",
         );
       } finally {
         setIsGenerating(false);
@@ -191,7 +280,7 @@ export function useCollage() {
   return {
     images,
     config,
-    setConfig,
+    setConfig: setConfigWithHistory,
     previewCanvas,
     isPreviewLoading,
     isGenerating,
@@ -205,5 +294,9 @@ export function useCollage() {
     sortImagesChronologically,
     clearImages,
     exportCollage,
+    undo: handleUndo,
+    redo: handleRedo,
+    canUndo,
+    canRedo,
   };
 }

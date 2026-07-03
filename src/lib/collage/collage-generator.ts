@@ -7,9 +7,13 @@ import type { FaceDetection } from "./face-detection";
 import { parseColorRGBA, colorHasAlpha } from "./color-utils";
 import { masonryPack } from "./layouts/masonry";
 import { gridPack } from "./layouts/grid";
+import { scatteredPack } from "./layouts/scattered";
+import { centeredPack } from "./layouts/centered";
+import { spiralPack } from "./layouts/spiral";
 import { smartResize, trimBorders } from "./image-processing";
 import { drawImageWithShadow, drawImageSimple } from "./shadow";
 import { smartFaceCrop } from "./face-crop";
+import { renderTextOverlays } from "./text-overlay";
 
 // Dynamic imports for face detection (not available in workers)
 let _detectFaces:
@@ -61,6 +65,27 @@ function previewDimensions(w: number, h: number): { w: number; h: number } {
 
 function spacingPixels(w: number, h: number, spacing: number): number {
   return Math.round(Math.min(w, h) * (spacing / 100) * 0.05);
+}
+
+function packLayout(
+  canvasW: number,
+  canvasH: number,
+  spacing: number,
+  layoutStyle: CollageConfig["layoutStyle"],
+  imageDims: { width: number; height: number; aspect: number }[],
+): ImageBlock[] {
+  switch (layoutStyle) {
+    case "masonry":
+      return masonryPack(canvasW, canvasH, spacing, imageDims);
+    case "grid":
+      return gridPack(canvasW, canvasH, spacing, imageDims);
+    case "scattered":
+      return scatteredPack(canvasW, canvasH, spacing, imageDims);
+    case "centered":
+      return centeredPack(canvasW, canvasH, spacing, imageDims);
+    case "spiral":
+      return spiralPack(canvasW, canvasH, spacing, imageDims);
+  }
 }
 
 // ─── Worker-safe canvas creation ───────────────────────────────────────────
@@ -260,12 +285,24 @@ async function compositeCollage(
     aspect: img.width / img.height,
   }));
 
-  const blocks: ImageBlock[] =
-    config.layoutStyle === "masonry"
-      ? masonryPack(canvas.width, canvas.height, config.spacing, imageDims)
-      : gridPack(canvas.width, canvas.height, config.spacing, imageDims);
+  const blocks: ImageBlock[] = packLayout(
+    canvas.width,
+    canvas.height,
+    config.spacing,
+    config.layoutStyle,
+    imageDims,
+  );
 
   const spacingPx = spacingPixels(canvas.width, canvas.height, config.spacing);
+
+  renderTextOverlays(
+    ctx,
+    config.textOverlays,
+    blocks,
+    canvas.width,
+    canvas.height,
+    spacingPx * 2,
+  );
 
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]!;
@@ -357,11 +394,19 @@ export async function generatePreview(
     height: img.height,
     aspect: img.width / img.height,
   }));
-  const blocks =
-    config.layoutStyle === "masonry"
-      ? masonryPack(canvas.width, canvas.height, config.spacing, imageDims)
-      : gridPack(canvas.width, canvas.height, config.spacing, imageDims);
+  const blocks = packLayout(
+    canvas.width, canvas.height, config.spacing, config.layoutStyle, imageDims,
+  );
   const spacingPx2 = spacingPixels(canvas.width, canvas.height, config.spacing);
+
+  renderTextOverlays(
+    ctx,
+    config.textOverlays,
+    blocks,
+    canvas.width,
+    canvas.height,
+    spacingPx2 * 2,
+  );
 
   const previewImages = await Promise.all(
     images.map(async (img) => {

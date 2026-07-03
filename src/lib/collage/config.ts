@@ -1,6 +1,16 @@
-export type LayoutStyle = "masonry" | "grid";
+export type LayoutStyle = "masonry" | "grid" | "scattered" | "centered" | "spiral";
 export type OutputFormat = "jpeg" | "png";
 export type DimensionMode = "px" | "mm";
+
+export interface TextOverlay {
+  id: string;
+  text: string;
+  fontFamily: string;
+  fontSize: number; // px at full-scale canvas
+  color: string;    // hex
+  opacity: number;   // 0–1
+  rotation: number;  // degrees, -90 to 90
+}
 
 export interface CollageConfig {
   widthPx: number; // default 1920, range 320–20000
@@ -19,6 +29,7 @@ export interface CollageConfig {
   faceMargin: number; // 0–0.3, default 0.08
   pretrimBorders: boolean;
   debugFaces: boolean;
+  textOverlays: TextOverlay[];
 }
 
 export interface ImageBlock {
@@ -54,4 +65,5 @@ export const DEFAULT_COLLAGE_CONFIG: CollageConfig = {
   faceMargin: 0.08,
   pretrimBorders: false,
   debugFaces: false,
+  textOverlays: [],
 };

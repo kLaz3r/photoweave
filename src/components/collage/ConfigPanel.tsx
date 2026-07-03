@@ -2,7 +2,14 @@
 
 import { memo, useCallback } from "react";
 import type { CollageConfig } from "~/lib/collage/config";
-import { GridIcon, MasonryIcon } from "~/components/icons";
+import { TextOverlayEditor } from "~/components/collage/TextOverlayEditor";
+import {
+  CenteredIcon,
+  GridIcon,
+  MasonryIcon,
+  ScatteredIcon,
+  SpiralIcon,
+} from "~/components/icons";
 
 const PRINT_PRESETS = [
   { label: "9x13cm", widthMm: 90, heightMm: 130 },
@@ -124,7 +131,7 @@ export const ConfigPanel = memo(function ConfigPanel({
 
   return (
     <div className="flex flex-col gap-5">
-      <h2 className="font-display text-2xl md:text-3xl">Configuration</h2>
+      <h2 className="font-display text-xl sm:text-2xl md:text-3xl">Configuration</h2>
 
       <form className="space-y-5">
         {/* Dimension mode */}
@@ -230,7 +237,7 @@ export const ConfigPanel = memo(function ConfigPanel({
         </div>
 
         {/* Custom dimensions */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
           <NumberInput
             label="Width"
             value={
@@ -246,6 +253,38 @@ export const ConfigPanel = memo(function ConfigPanel({
               )
             }
           />
+          <button
+            type="button"
+            aria-label="Swap width and height"
+            title="Swap orientation"
+            className="mb-1 flex h-10 w-10 items-center justify-center rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)] transition hover:bg-white/5"
+            onClick={() => {
+              if (config.dimensionMode === "mm") {
+                update({ widthMm: config.heightMm, heightMm: config.widthMm });
+              } else {
+                update({
+                  widthPx: config.heightPx,
+                  heightPx: config.widthPx,
+                });
+              }
+            }}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="17 1 21 5 17 9" />
+              <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+              <polyline points="7 23 3 19 7 15" />
+              <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+            </svg>
+          </button>
           <NumberInput
             label="Height"
             value={
@@ -315,39 +354,29 @@ export const ConfigPanel = memo(function ConfigPanel({
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm opacity-80">Layout</span>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => update({ layoutStyle: "masonry" })}
-              className={[
-                "flex flex-col items-center justify-center gap-2 rounded-xl border px-4 py-4 transition-colors",
-                config.layoutStyle === "masonry"
-                  ? "border-[color:var(--theme-accent)] bg-[color:var(--theme-accent)]/10"
-                  : "border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)]",
-              ].join(" ")}
-            >
-              <MasonryIcon
-                height={36}
-                className="text-[color:var(--theme-text)]"
-              />
-              <span className="text-base">Masonry</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => update({ layoutStyle: "grid" })}
-              className={[
-                "flex flex-col items-center justify-center gap-2 rounded-xl border px-4 py-4 transition-colors",
-                config.layoutStyle === "grid"
-                  ? "border-[color:var(--theme-accent)] bg-[color:var(--theme-accent)]/10"
-                  : "border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)]",
-              ].join(" ")}
-            >
-              <GridIcon
-                height={36}
-                className="text-[color:var(--theme-text)]"
-              />
-              <span className="text-base">Grid</span>
-            </button>
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { style: "masonry", Icon: MasonryIcon, label: "Masonry" },
+              { style: "grid", Icon: GridIcon, label: "Grid" },
+              { style: "scattered", Icon: ScatteredIcon, label: "Scattered" },
+              { style: "centered", Icon: CenteredIcon, label: "Centered" },
+              { style: "spiral", Icon: SpiralIcon, label: "Spiral" },
+            ] as const).map(({ style, Icon, label }) => (
+              <button
+                key={style}
+                type="button"
+                onClick={() => update({ layoutStyle: style })}
+                className={[
+                  "flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-3 transition-colors",
+                  config.layoutStyle === style
+                    ? "border-[color:var(--theme-accent)] bg-[color:var(--theme-accent)]/10"
+                    : "border-[color:color-mix(in_oklch,var(--theme-text)_20%,transparent)]",
+                ].join(" ")}
+              >
+                <Icon height={30} className="text-[color:var(--theme-text)]" />
+                <span className="text-xs">{label}</span>
+              </button>
+            ))}
           </div>
         </div>
 
@@ -493,6 +522,20 @@ export const ConfigPanel = memo(function ConfigPanel({
               </label>
             </>
           )}
+        </div>
+
+        {/* Text Overlays */}
+        <div className="space-y-3 rounded-xl border border-[color:color-mix(in_oklch,var(--theme-text)_18%,transparent)] bg-[color:color-mix(in_oklch,var(--theme-background)_72%,transparent)] p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm opacity-80">Text Overlays</span>
+            <span className="text-xs opacity-50">
+              {config.textOverlays.length}
+            </span>
+          </div>
+          <TextOverlayEditor
+            overlays={config.textOverlays}
+            onChange={(next) => update({ textOverlays: next })}
+          />
         </div>
       </form>
     </div>
