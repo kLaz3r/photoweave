@@ -92,84 +92,71 @@ export function trimBorders(canvas: HTMLCanvasElement | OffscreenCanvas): {
   const imageData = ctx.getImageData(0, 0, w, h);
   const data = imageData.data;
 
-  // Compute per-row and per-column mean luminance
+  // Compute per-row and per-column luminance mean + pixel-level std dev
   // data layout: RGBA RGBA RGBA ... row-major
   const rowMean = new Float32Array(h);
+  const rowStd = new Float32Array(h);
   const colMean = new Float32Array(w);
+  const colSumSq = new Float32Array(w);
 
   for (let y = 0; y < h; y++) {
-    let sum = 0;
+    let rowSum = 0;
+    let rowSumSq = 0;
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4;
       const lum =
         0.299 * data[i]! + 0.587 * data[i + 1]! + 0.114 * data[i + 2]!;
-      sum += lum;
+      rowSum += lum;
+      rowSumSq += lum * lum;
       colMean[x] = (colMean[x] ?? 0) + lum;
+      colSumSq[x] = (colSumSq[x] ?? 0) + lum * lum;
     }
-    rowMean[y] = sum / w;
+    rowMean[y] = rowSum / w;
+    const rowMsq = rowSumSq / w;
+    const rowM = rowMean[y]!;
+    rowStd[y] = Math.sqrt(Math.max(0, rowMsq - rowM * rowM));
   }
 
+  const colStd = new Float32Array(w);
   for (let x = 0; x < w; x++) {
-    colMean[x] = (colMean[x] ?? 0) / h;
-  }
-
-  // Standard deviation helper
-  function rowStdDev(startY: number, endY: number): number {
-    let sum = 0;
-    for (let y = startY; y < endY; y++) sum += rowMean[y]!;
-    const mean = sum / (endY - startY);
-    let varSum = 0;
-    for (let y = startY; y < endY; y++) {
-      const d = rowMean[y]! - mean;
-      varSum += d * d;
-    }
-    return Math.sqrt(varSum / (endY - startY));
-  }
-
-  function colStdDev(startX: number, endX: number): number {
-    let sum = 0;
-    for (let x = startX; x < endX; x++) sum += colMean[x]!;
-    const mean = sum / (endX - startX);
-    let varSum = 0;
-    for (let x = startX; x < endX; x++) {
-      const d = colMean[x]! - mean;
-      varSum += d * d;
-    }
-    return Math.sqrt(varSum / (endX - startX));
+    colMean[x] = colMean[x]! / h;
+    const colMsq = colSumSq[x]! / h;
+    const colM = colMean[x]!;
+    colStd[x] = Math.sqrt(Math.max(0, colMsq - colM * colM));
   }
 
   const MIN_FRAC = 0.04; // same as Python min_frac
 
   // Scan top border
   let top = 0;
-  outerTop: for (; top < Math.floor(h * (1 - MIN_FRAC)); top++) {
-    const std = rowStdDev(top, top + 1);
+  for (; top < Math.floor(h * (1 - MIN_FRAC)); top++) {
+    const std = rowStd[top]!;
     const mean = rowMean[top]!;
-    if (std >= 2.0 || mean < 16 || mean > 239) break outerTop;
+    if (std >= 2.0 || mean < 16 || mean > 239) break;
   }
 
   // Scan bottom border
   let bottom = h;
-  outerBottom: for (; bottom > Math.ceil(h * MIN_FRAC); bottom--) {
-    const std = rowStdDev(bottom - 1, bottom);
+  for (; bottom > Math.ceil(h * MIN_FRAC); bottom--) {
+    const std = rowStd[bottom - 1]!;
     const mean = rowMean[bottom - 1]!;
-    if (std >= 2.0 || mean < 16 || mean > 239) break outerBottom;
+    if (std >= 2.0 || mean < 16 || mean > 239) break;
   }
 
   // Scan left border
   let left = 0;
-  outerLeft: for (; left < Math.floor(w * (1 - MIN_FRAC)); left++) {
-    const std = colStdDev(left, left + 1);
+  for (; left < Math.floor(w * (1 - MIN_FRAC)); left++) {
+    const std = colStd[left]!;
     const mean = colMean[left]!;
-    if (std >= 2.0 || mean < 16 || mean > 239) break outerLeft;
+    if (std >= 2.0 || mean < 16 || mean > 239) break;
   }
 
   // Scan right border
   let right = w;
-  outerRight: for (; right > Math.ceil(w * MIN_FRAC); right--) {
-    const std = colStdDev(right - 1, right);
+  for (; right > Math.ceil(w * MIN_FRAC); right--) {
+    const std = colStd[right - 1]!;
     const mean = colMean[right - 1]!;
-    if (std >= 2.0 || mean < 16 || mean > 239) break outerRight;
+    if (std >= 2.0 || mean < 16 || mean > 239) break;
   }
 
   return { left, top, right, bottom };
