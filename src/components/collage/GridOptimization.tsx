@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import type { GridInfo } from "~/lib/collage/layouts/grid";
 
 interface GridOptimizationProps {
@@ -8,7 +9,7 @@ interface GridOptimizationProps {
   onRemovePhotos: (count: number) => void;
 }
 
-export function GridOptimization({
+export const GridOptimization = memo(function GridOptimization({
   gridInfo,
   onAddPhotos,
   onRemovePhotos,
@@ -70,4 +71,4 @@ export function GridOptimization({
   }
 
   return null;
-}
+});

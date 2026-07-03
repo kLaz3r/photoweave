@@ -26,6 +26,27 @@ const AmbientBackground: React.FC<AmbientBackgroundProps> = ({
 
     let frame = 0;
     let docHeight = 1;
+    let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+    let isRafRunning = false;
+
+    const stopRaf = () => {
+      if (frame) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+        isRafRunning = false;
+      }
+    };
+
+    const startRaf = () => {
+      if (isRafRunning) return;
+      isRafRunning = true;
+      const tick = () => {
+        if (!isRafRunning) return;
+        update();
+        frame = requestAnimationFrame(tick) as unknown as number;
+      };
+      frame = requestAnimationFrame(tick) as unknown as number;
+    };
 
     // Randomized seed per mount/refresh
     const seed = {
@@ -127,8 +148,10 @@ const AmbientBackground: React.FC<AmbientBackgroundProps> = ({
     };
 
     const onScroll = () => {
-      if (frame) return;
-      frame = requestAnimationFrame(update) as unknown as number;
+      // Pause RAF after 300ms of no scrolling
+      if (scrollTimer) clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(stopRaf, 300);
+      startRaf();
     };
 
     const onResize = () => {
@@ -138,12 +161,14 @@ const AmbientBackground: React.FC<AmbientBackgroundProps> = ({
 
     computeDocHeight();
     update();
+    startRaf();
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onResize);
     return () => {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
-      if (frame) cancelAnimationFrame(frame);
+      if (scrollTimer) clearTimeout(scrollTimer);
+      stopRaf();
     };
   }, []);
 

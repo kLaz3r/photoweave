@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useCollage } from "~/hooks/useCollage";
 import { ImageUploader } from "~/components/collage/ImageUploader";
 import { ConfigPanel } from "~/components/collage/ConfigPanel";
@@ -30,6 +30,8 @@ export default function CollagePage() {
   const {
     isLoading: faceLoading,
     isReady: faceReady,
+    isError: faceError,
+    error: faceErrorMsg,
     ensureLoaded,
   } = useFaceDetector();
 
@@ -41,16 +43,46 @@ export default function CollagePage() {
 
   const handleRemoveN = useCallback(
     (count: number) => {
-      for (let i = 0; i < count; i++) removeImage(images.length - 1 - i);
+      const currentImages = imagesRef.current;
+      for (let i = 0; i < count; i++) {
+        const idx = currentImages.length - 1 - i;
+        if (idx >= 0) removeImage(idx);
+      }
     },
-    [images.length, removeImage],
+    [removeImage],
   );
 
-  // Build thumbnail list for ImageUploader
-  const thumbnails = images.map((img, i) => ({
-    id: String(i),
-    previewUrl: URL.createObjectURL(img.file),
-  }));
+  const imagesRef = useRef(images);
+  imagesRef.current = images;
+
+  const thumbnails = useMemo(() => {
+    const urls: Array<{ id: string; previewUrl: string }> = [];
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i]!;
+      urls.push({
+        id: String(i),
+        previewUrl: URL.createObjectURL(img.file),
+      });
+    }
+    return urls;
+  }, [images]);
+
+  useEffect(() => {
+    const currentUrls = thumbnails;
+    return () => {
+      for (const t of currentUrls) URL.revokeObjectURL(t.previewUrl);
+    };
+  }, [thumbnails]);
+
+  const handleFiles = useCallback(
+    (files: File[]) => void addImages(files),
+    [addImages],
+  );
+
+  const handleRemove = useCallback(
+    (id: string) => removeImage(Number(id)),
+    [removeImage],
+  );
 
   return (
     <main className="text-text container mx-auto mt-[96px] mb-16 px-4">
@@ -78,8 +110,8 @@ export default function CollagePage() {
           {/* Left column: Image uploader */}
           <ImageUploader
             images={thumbnails}
-            onFiles={(files) => void addImages(files)}
-            onRemove={(id) => removeImage(Number(id))}
+            onFiles={handleFiles}
+            onRemove={handleRemove}
             onClear={clearImages}
             onShuffle={shuffleImages}
             onSortChronologically={sortImagesChronologically}
@@ -104,7 +136,13 @@ export default function CollagePage() {
                 <div className="mb-1 text-xs opacity-60">
                   Rendering: {progress}%
                 </div>
-                <div className="h-2 w-full rounded-full bg-white/10">
+                <div
+                  className="h-2 w-full rounded-full bg-white/10"
+                  role="progressbar"
+                  aria-valuenow={progress}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
                   <div
                     className="h-full rounded-full bg-[color:var(--theme-accent)] transition-all"
                     style={{ width: `${progress}%` }}
@@ -156,6 +194,7 @@ export default function CollagePage() {
             onChange={setConfig}
             onFaceDetectorLoading={faceLoading}
             onFaceDetectorReady={faceReady}
+            onFaceDetectorError={faceError ? faceErrorMsg : null}
             onEnsureFaceDetector={ensureLoaded}
           />
         </div>

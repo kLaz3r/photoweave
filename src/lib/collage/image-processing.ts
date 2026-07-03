@@ -1,14 +1,4 @@
 /**
- * Load an image from a File, applying EXIF orientation via createImageBitmap.
- * For Safari <17 or when the file is TIFF/raw, falls back to canvas + exifr.
- */
-export async function loadImageFromFile(file: File): Promise<ImageBitmap> {
-  // createImageBitmap handles EXIF orientation natively in modern browsers
-  const bitmap = await createImageBitmap(file);
-  return bitmap;
-}
-
-/**
  * Smart resize — scale-to-cover + optional center crop.
  * Matches Python _smart_resize (lines 927–964).
  * Works with both HTMLCanvasElement (main thread) and OffscreenCanvas (worker).
@@ -18,18 +8,14 @@ export function smartResize(
   targetW: number,
   targetH: number,
   maintainAspect: boolean,
-): HTMLCanvasElement | OffscreenCanvas {
+): OffscreenCanvas {
   const srcW = source.width;
   const srcH = source.height;
 
-  // Use OffscreenCanvas in workers, HTMLCanvasElement on main thread
-  const isWorker = typeof document === "undefined";
-  const canvas = isWorker
-    ? new OffscreenCanvas(Math.max(1, targetW), Math.max(1, targetH))
-    : document.createElement("canvas");
+  const canvas = new OffscreenCanvas(Math.max(1, targetW), Math.max(1, targetH));
   canvas.width = Math.max(1, targetW);
   canvas.height = Math.max(1, targetH);
-  const ctx = canvas.getContext("2d")! as CanvasRenderingContext2D;
+  const ctx = canvas.getContext("2d")!;
 
   if (!maintainAspect) {
     ctx.drawImage(source, 0, 0, targetW, targetH);
@@ -42,12 +28,10 @@ export function smartResize(
   const scaledH = Math.max(1, Math.round(srcH * scale));
 
   // Draw scaled image
-  const tmp = isWorker
-    ? new OffscreenCanvas(scaledW, scaledH)
-    : document.createElement("canvas");
+  const tmp = new OffscreenCanvas(scaledW, scaledH);
   tmp.width = scaledW;
   tmp.height = scaledH;
-  const tmpCtx = tmp.getContext("2d")! as CanvasRenderingContext2D;
+  const tmpCtx = tmp.getContext("2d")!;
   tmpCtx.drawImage(source, 0, 0, scaledW, scaledH);
 
   // Center crop

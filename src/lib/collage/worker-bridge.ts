@@ -74,15 +74,21 @@ export function generateCollageWithWorker(
       worker.terminate();
     };
 
-    // Send images to worker (bitmaps are copied, not transferred)
-    // We can't transfer because bitmaps are still needed in main thread for preview
+    // Strip File objects before sending to worker (they aren't needed and waste memory)
+    const transferImages = images.map(({ bitmap, width, height, aspect }) => ({
+      bitmap,
+      width,
+      height,
+      aspect,
+    }));
+
     // Disable face detection in worker since MediaPipe doesn't support worker context
     const workerConfig = {
       ...config,
       faceAwareCropping: false,
       debugFaces: false,
     };
-    worker.postMessage({ images, config: workerConfig });
+    worker.postMessage({ images: transferImages, config: workerConfig });
   });
 }
 
@@ -94,15 +100,20 @@ export async function downloadCanvas(
   format: "jpeg" | "png",
   filename: string,
 ): Promise<void> {
-  const dataUrl = canvas.toDataURL(
-    format === "png" ? "image/png" : "image/jpeg",
-    format === "jpeg" ? 0.95 : undefined,
-  );
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("Canvas toBlob failed"))),
+      format === "png" ? "image/png" : "image/jpeg",
+      format === "jpeg" ? 0.95 : undefined,
+    );
+  });
 
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = dataUrl;
+  a.href = url;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
 }

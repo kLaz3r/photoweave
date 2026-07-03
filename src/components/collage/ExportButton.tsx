@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+
 interface ExportButtonProps {
   imageCount: number;
   isGenerating: boolean;
@@ -7,7 +9,7 @@ interface ExportButtonProps {
   onExport: () => void;
 }
 
-export function ExportButton({
+export const ExportButton = memo(function ExportButton({
   imageCount,
   isGenerating,
   onExport,
@@ -29,4 +31,4 @@ export function ExportButton({
       {isGenerating ? "Exporting…" : "Download Collage"}
     </button>
   );
-}
+});

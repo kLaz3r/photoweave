@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useCallback } from "react";
 import type { CollageConfig } from "~/lib/collage/config";
 import { GridIcon, MasonryIcon } from "~/components/icons";
 
@@ -54,6 +55,7 @@ interface ConfigPanelProps {
   onChange: (next: CollageConfig) => void;
   onFaceDetectorLoading: boolean;
   onFaceDetectorReady: boolean;
+  onFaceDetectorError: string | null;
   onEnsureFaceDetector: () => void;
 }
 
@@ -76,9 +78,12 @@ function NumberInput({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-sm opacity-80">{label}</label>
+      <label className="mb-1 block text-sm opacity-80" htmlFor={`num-${label.toLowerCase().replace(/\s+/g, "-")}`}>
+        {label}
+      </label>
       <div className="flex items-center gap-2">
         <input
+          id={`num-${label.toLowerCase().replace(/\s+/g, "-")}`}
           type="number"
           min={min}
           max={max}
@@ -96,15 +101,18 @@ function NumberInput({
   );
 }
 
-export function ConfigPanel({
+export const ConfigPanel = memo(function ConfigPanel({
   config,
   onChange,
   onFaceDetectorLoading,
   onFaceDetectorReady,
+  onFaceDetectorError,
   onEnsureFaceDetector,
 }: ConfigPanelProps) {
-  const update = (patch: Partial<CollageConfig>) =>
-    onChange({ ...config, ...patch });
+  const update = useCallback(
+    (patch: Partial<CollageConfig>) => onChange({ ...config, ...patch }),
+    [config, onChange],
+  );
 
   const { w: canvasW, h: canvasH } =
     config.dimensionMode === "mm"
@@ -354,6 +362,10 @@ export function ConfigPanel({
             min={0}
             max={100}
             value={config.spacing}
+            aria-label="Spacing between images"
+            aria-valuenow={config.spacing}
+            aria-valuemin={0}
+            aria-valuemax={100}
             onChange={(e) => update({ spacing: Number(e.target.value) })}
             className="w-full"
           />
@@ -436,7 +448,9 @@ export function ConfigPanel({
             <>
               <div>
                 <div className="mb-1 flex items-center justify-between">
-                  <span className="text-xs opacity-70">Face Margin</span>
+                  <span className="text-xs opacity-70">
+                    Face Margin
+                  </span>
                   <span className="text-xs opacity-50">
                     {config.faceMargin}
                   </span>
@@ -447,6 +461,10 @@ export function ConfigPanel({
                   max={0.3}
                   step={0.01}
                   value={config.faceMargin}
+                  aria-label="Face margin for cropping"
+                  aria-valuenow={config.faceMargin}
+                  aria-valuemin={0}
+                  aria-valuemax={0.3}
                   onChange={(e) =>
                     update({ faceMargin: Number(e.target.value) })
                   }
@@ -456,6 +474,11 @@ export function ConfigPanel({
               {onFaceDetectorLoading && (
                 <p className="text-xs text-[color:var(--theme-accent)]">
                   Loading face detector…
+                </p>
+              )}
+              {onFaceDetectorError && (
+                <p className="text-xs text-red-400">
+                  Face detector error: {onFaceDetectorError}
                 </p>
               )}
 
@@ -474,4 +497,4 @@ export function ConfigPanel({
       </form>
     </div>
   );
-}
+});

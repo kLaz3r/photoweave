@@ -20,21 +20,17 @@ export function smartFaceCrop(
   faces: FaceDetection[],
   targetW: number,
   targetH: number,
-): HTMLCanvasElement | OffscreenCanvas | null {
+): OffscreenCanvas | null {
   if (!faces.length) return null;
 
   const srcW = source.width;
   const srcH = source.height;
   if (srcW === 0 || srcH === 0) return null;
 
-  // Use OffscreenCanvas in workers, HTMLCanvasElement on main thread
-  const isWorker = typeof document === "undefined";
-  const result = isWorker
-    ? new OffscreenCanvas(Math.max(1, targetW), Math.max(1, targetH))
-    : document.createElement("canvas");
+  const result = new OffscreenCanvas(Math.max(1, targetW), Math.max(1, targetH));
   result.width = Math.max(1, targetW);
   result.height = Math.max(1, targetH);
-  const ctx = result.getContext("2d")! as CanvasRenderingContext2D;
+  const ctx = result.getContext("2d")!;
 
   let cropLeft = 0;
   let cropTop = 0;

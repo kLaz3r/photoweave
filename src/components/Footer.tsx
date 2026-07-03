@@ -19,7 +19,7 @@ export default function Footer() {
 
         <div className="text-center text-lg">
           <span>
-            Made with <span className="text-[var(--theme-accent)]">❤️</span> by
+            Made with <span className="text-[var(--theme-accent)]" aria-hidden>❤️</span><span className="sr-only">love</span> by
           </span>{" "}
           <Link
             href="https://github.com/kLaz3r"

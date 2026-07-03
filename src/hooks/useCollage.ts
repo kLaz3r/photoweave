@@ -15,16 +15,7 @@ import {
   calculateOptimalGrid,
   type GridInfo,
 } from "~/lib/collage/layouts/grid";
-
-function calcCanvasPx(config: CollageConfig): { w: number; h: number } {
-  if (config.dimensionMode === "mm") {
-    return {
-      w: Math.round((config.widthMm / 25.4) * config.dpi),
-      h: Math.round((config.heightMm / 25.4) * config.dpi),
-    };
-  }
-  return { w: config.widthPx, h: config.heightPx };
-}
+import toast from "react-hot-toast";
 
 export function useCollage() {
   const [images, setImages] = useState<LoadedImage[]>([]);
@@ -55,8 +46,9 @@ export function useCollage() {
         try {
           const canvas = await generatePreview(images, config);
           setPreviewCanvas(canvas);
-        } catch {
-          // Silently ignore preview errors
+        } catch (err) {
+          console.error("Preview failed:", err);
+          toast.error("Failed to generate preview. Try adjusting your settings.");
         } finally {
           setIsPreviewLoading(false);
         }
@@ -74,9 +66,22 @@ export function useCollage() {
       setGridInfo(null);
       return;
     }
-    const { w, h } = calcCanvasPx(config);
-    setGridInfo(calculateOptimalGrid(images.length, w, h, config.spacing));
-  }, [images.length, config]);
+    const dimPx =
+      config.dimensionMode === "mm"
+        ? {
+            w: Math.round((config.widthMm / 25.4) * config.dpi),
+            h: Math.round((config.heightMm / 25.4) * config.dpi),
+          }
+        : { w: config.widthPx, h: config.heightPx };
+    setGridInfo(
+      calculateOptimalGrid(
+        images.length,
+        dimPx.w,
+        dimPx.h,
+      config.spacing,
+    ),
+  );
+  }, [images.length, config.layoutStyle, config.spacing, config.dimensionMode, config.widthMm, config.heightMm, config.widthPx, config.heightPx, config.dpi]);
 
   // Load images from File objects
   const addImages = useCallback(async (files: File[]) => {
@@ -144,7 +149,10 @@ export function useCollage() {
       if (images.length < 2) return;
       setIsGenerating(true);
       setProgress(0);
-      setExportBitmap(null);
+      setExportBitmap((prev) => {
+        prev?.close();
+        return null;
+      });
 
       try {
         // Use worker for full-res generation
@@ -167,8 +175,12 @@ export function useCollage() {
         const filename = `photoweave-collage${ext}`;
 
         await downloadCanvas(canvas, fmt, filename);
+        toast.success("Collage exported!");
       } catch (err) {
         console.error("Export failed:", err);
+        toast.error(
+          err instanceof Error ? err.message : "Export failed. Please try again.",
+        );
       } finally {
         setIsGenerating(false);
       }

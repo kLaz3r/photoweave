@@ -1,59 +1,64 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { useThemeStore } from "~/lib/theme";
 
 export default function ScrollProgressBar() {
   const barRef = useRef<HTMLDivElement | null>(null);
-  const targetProgress = useRef(0); // 0..1
-  const currentProgress = useRef(0); // 0..1
-  const rafId = useRef<number | null>(null);
-  const [isDark, setIsDark] = useState(false);
+  const targetProgress = useRef(0);
+  const currentProgress = useRef(0);
+  const isDark = useThemeStore((s) => s.theme === "dark");
 
   useEffect(() => {
+    let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+    let rafId: number | null = null;
+    let isRafRunning = false;
+
+    const stopRaf = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+        isRafRunning = false;
+      }
+    };
+
+    const startRaf = () => {
+      if (isRafRunning) return;
+      isRafRunning = true;
+      const tick = () => {
+        if (!isRafRunning) return;
+        const smoothing = 0.15;
+        currentProgress.current +=
+          (targetProgress.current - currentProgress.current) * smoothing;
+        if (barRef.current) {
+          barRef.current.style.transform = `scaleX(${currentProgress.current})`;
+        }
+        rafId = requestAnimationFrame(tick);
+      };
+      rafId = requestAnimationFrame(tick);
+    };
+
     const updateScrollProgress = () => {
       const scrollTop = window.scrollY;
       const docHeight =
         document.documentElement.scrollHeight - window.innerHeight;
       const progress = docHeight > 0 ? scrollTop / docHeight : 0;
       targetProgress.current = Math.min(1, Math.max(0, progress));
+
+      if (scrollTimer) clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(stopRaf, 300);
+      startRaf();
     };
 
-    const checkTheme = () => {
-      const theme = document.documentElement.getAttribute("data-theme");
-      setIsDark(theme === "dark");
-    };
-
-    // Initial calculations
     updateScrollProgress();
-    checkTheme();
+    startRaf();
 
-    // RAF-driven smoothing (lerp)
-    const tick = () => {
-      const smoothing = 0.15; // lower = smoother, higher = snappier
-      currentProgress.current +=
-        (targetProgress.current - currentProgress.current) * smoothing;
-      if (barRef.current) {
-        barRef.current.style.transform = `scaleX(${currentProgress.current})`;
-      }
-      rafId.current = requestAnimationFrame(tick);
-    };
-    rafId.current = requestAnimationFrame(tick);
-
-    // Add scroll event listener
     window.addEventListener("scroll", updateScrollProgress, { passive: true });
 
-    // Watch for theme changes
-    const observer = new MutationObserver(checkTheme);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"],
-    });
-
-    // Cleanup
     return () => {
       window.removeEventListener("scroll", updateScrollProgress);
-      observer.disconnect();
-      if (rafId.current) cancelAnimationFrame(rafId.current);
+      if (scrollTimer) clearTimeout(scrollTimer);
+      stopRaf();
     };
   }, []);
 

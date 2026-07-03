@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useRef } from "react";
+import { memo, useCallback, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 
 interface ImageUploaderProps {
@@ -13,7 +13,7 @@ interface ImageUploaderProps {
   onSortChronologically: () => void;
 }
 
-export function ImageUploader({
+export const ImageUploader = memo(function ImageUploader({
   images,
   onFiles,
   onRemove,
@@ -23,6 +23,7 @@ export function ImageUploader({
 }: ImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const appendModeRef = useRef(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -138,7 +139,7 @@ export function ImageUploader({
                 type="button"
                 aria-label="Random order"
                 title="Shuffle images in random order"
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-current/15 px-3 py-1.5 text-xs font-medium transition hover:bg-white/5"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-current/15 px-3 py-2 text-xs font-medium transition hover:bg-white/5 focus:ring-1 focus:ring-[color:var(--theme-accent)]"
                 onClick={onShuffle}
               >
                 <svg
@@ -163,7 +164,7 @@ export function ImageUploader({
                 type="button"
                 aria-label="Chronological order"
                 title="Sort images by date taken"
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-current/15 px-3 py-1.5 text-xs font-medium transition hover:bg-white/5"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-current/15 px-3 py-2 text-xs font-medium transition hover:bg-white/5 focus:ring-1 focus:ring-[color:var(--theme-accent)]"
                 onClick={onSortChronologically}
               >
                 <svg
@@ -200,8 +201,8 @@ export function ImageUploader({
                 />
                 <button
                   type="button"
-                  aria-label="Remove"
-                  className="absolute top-1 right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-xs text-white hover:bg-black/90"
+                  aria-label={`Remove image ${img.id}`}
+                  className="absolute top-1 right-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-xs text-white hover:bg-black/90"
                   onClick={() => onRemove(img.id)}
                 >
                   ×
@@ -212,16 +213,44 @@ export function ImageUploader({
         </div>
       )}
 
-      {/* Clear */}
       {images.length > 0 && (
-        <button
-          type="button"
-          className="w-full rounded-full border border-current/20 px-6 py-2 text-base"
-          onClick={onClear}
-        >
-          × Clear All
-        </button>
+        <div className="flex flex-col gap-2">
+          {confirmClear ? (
+            <div className="flex flex-col gap-2 rounded-xl border border-red-500/40 bg-red-500/10 p-3">
+              <p className="text-sm text-red-400">
+                Remove all {images.length} photos?
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="flex-1 rounded-full bg-red-500/20 px-4 py-1.5 text-sm font-medium text-red-400 transition hover:bg-red-500/30"
+                  onClick={() => {
+                    onClear();
+                    setConfirmClear(false);
+                  }}
+                >
+                  Yes, Clear All
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 rounded-full border border-current/20 px-4 py-1.5 text-sm transition hover:bg-white/5"
+                  onClick={() => setConfirmClear(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="w-full rounded-full border border-current/20 px-6 py-2 text-base"
+              onClick={() => setConfirmClear(true)}
+            >
+              × Clear All
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
-}
+});

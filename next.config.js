@@ -5,6 +5,18 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+  experimental: {
+    optimizePackageImports: [
+      "motion",
+      "react-icons",
+      "react-dropzone",
+      "@radix-ui/react-accordion",
+    ],
+  },
+  images: {
+    formats: ["image/avif", "image/webp"],
+  },
+};
 
 export default config;

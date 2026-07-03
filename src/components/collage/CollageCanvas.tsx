@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
 interface CollageCanvasProps {
@@ -11,7 +11,7 @@ interface CollageCanvasProps {
   label?: string;
 }
 
-export function CollageCanvas({
+export const CollageCanvas = memo(function CollageCanvas({
   canvas,
   isPreviewLoading,
   isGenerating,
@@ -82,21 +82,27 @@ export function CollageCanvas({
         )}
 
         {/* Progress overlay */}
-        {isGenerating && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50">
-            <span className="mb-3 text-lg font-semibold text-white">
-              Rendering…
-            </span>
-            <div className="h-2 w-48 rounded-full bg-white/30">
-              <div
-                className="h-full rounded-full bg-[color:var(--theme-accent)] transition-all"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <span className="mt-2 text-sm text-white/80">{progress}%</span>
-          </div>
-        )}
+            {isGenerating && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50">
+                <span className="mb-3 text-lg font-semibold text-white">
+                  Rendering…
+                </span>
+                <div
+                  className="h-2 w-48 rounded-full bg-white/30"
+                  role="progressbar"
+                  aria-valuenow={progress}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <div
+                    className="h-full rounded-full bg-[color:var(--theme-accent)] transition-all"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <span className="mt-2 text-sm text-white/80">{progress}%</span>
+              </div>
+            )}
       </div>
     </div>
   );
-}
+});

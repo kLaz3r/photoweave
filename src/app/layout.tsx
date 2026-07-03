@@ -6,6 +6,7 @@ import Navbar from "~/components/Navbar";
 import ScrollProgressBar from "~/components/ScrollProgressBar";
 import ThemeInit from "~/components/ThemeInit";
 import ThemeScript from "~/components/ThemeScript";
+import { Toaster } from "react-hot-toast";
 
 import { type Metadata, type Viewport } from "next";
 import Script from "next/script";
@@ -66,7 +67,7 @@ export const metadata: Metadata = {
     shortcut: ["/favicon.ico"],
     apple: "/apple-icon.png",
   },
-  manifest: "/manifest.json",
+  manifest: "/site.webmanifest",
   appleWebApp: {
     title: "PhotoWeave",
   },
@@ -178,6 +179,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body bg-background relative w-screen max-w-screen overflow-x-clip">
+        <Toaster position="bottom-right" />
         <ThemeScript />
         <ThemeInit />
         <AmbientBackground opacity={0.18} />

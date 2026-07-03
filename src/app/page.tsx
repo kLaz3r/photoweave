@@ -3,7 +3,6 @@
 import { cubicBezier } from "motion";
 import { motion } from "motion/react";
 import Image from "next/image";
-import Link from "next/link";
 import { PiUserFill } from "react-icons/pi";
 import HeroBackground from "~/components/HeroBackground";
 import {
@@ -85,16 +84,15 @@ const HeroSection = () => {
             className="flex flex-col items-center gap-4 md:flex-row"
             variants={fadeUpChild}
           >
-            <Link href="/collage">
-              <motion.button
-                className="bg-accent rounded-full px-8 py-4 text-2xl font-bold text-white"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ type: "spring", stiffness: 500, damping: 32 }}
-              >
-                Start Weaving!
-              </motion.button>
-            </Link>
+            <motion.a
+              href="/collage"
+              className="bg-accent inline-block rounded-full px-8 py-4 text-2xl font-bold text-white"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 500, damping: 32 }}
+            >
+              Start Weaving!
+            </motion.a>
             <motion.p className="text-lg" variants={fadeUpChild}>
               Join 10,000+ happy creators <br /> who&apos;ve woven their
               stories!
@@ -110,9 +108,11 @@ const HeroSection = () => {
             <Image
               className="w-full md:w-auto"
               src="/hero-photo.png"
-              alt="Hero image"
+              alt="PhotoWeave collage preview showing a beautifully arranged photo grid"
               width={600}
               height={600}
+              priority
+              sizes="(max-width: 768px) 100vw, 600px"
             />
           </motion.div>
         </motion.div>
@@ -263,12 +263,13 @@ const PhoneSection = () => {
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
           >
-            <Image
-              src="/phone.png"
-              alt="Phone collage preview"
-              width={520}
-              height={520}
-            />
+              <Image
+                src="/phone.png"
+                alt="PhotoWeave collage displayed on a mobile phone screen"
+                width={520}
+                height={520}
+                sizes="(max-width: 768px) 280px, 520px"
+              />
           </motion.div>
         </motion.div>
 
@@ -519,18 +520,16 @@ const FinalCTASection = () => {
           <br />
           <span className="text-gradient">own story?</span>
         </motion.h2>
-        <Link href="/collage">
-          <motion.button
-            type="button"
-            className="bg-accent rounded-full px-10 py-5 text-2xl font-bold text-white shadow-lg transition-colors hover:opacity-90"
-            variants={fadeUpChild}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 500, damping: 32 }}
-          >
-            Start Weaving!
-          </motion.button>
-        </Link>
+        <motion.a
+          href="/collage"
+          className="bg-accent inline-block rounded-full px-10 py-5 text-2xl font-bold text-white shadow-lg transition-colors hover:opacity-90"
+          variants={fadeUpChild}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: "spring", stiffness: 500, damping: 32 }}
+        >
+          Start Weaving!
+        </motion.a>
       </motion.div>
     </motion.section>
   );

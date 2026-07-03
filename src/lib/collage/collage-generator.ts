@@ -64,19 +64,10 @@ function spacingPixels(w: number, h: number, spacing: number): number {
 }
 
 // ─── Worker-safe canvas creation ───────────────────────────────────────────
-// OffscreenCanvas is available in both main thread and workers.
-// Falls back to document.createElement only for preview (main thread only).
 function makeCanvas(
   w: number,
   h: number,
-  isPreview: boolean,
 ): HTMLCanvasElement | OffscreenCanvas {
-  if (isPreview && typeof document !== "undefined") {
-    const c = document.createElement("canvas");
-    c.width = w;
-    c.height = h;
-    return c;
-  }
   return new OffscreenCanvas(w, h);
 }
 
@@ -153,12 +144,14 @@ async function prerenderImage(
   config: CollageConfig,
   spacingPx: number,
   imageIndex: number,
-  _isPreview: boolean,
 ): Promise<ImageBitmap> {
   let srcCanvas: HTMLCanvasElement | OffscreenCanvas;
+  const needsProcessing =
+    config.pretrimBorders || config.faceAwareCropping || config.debugFaces;
 
-  // Apply pre-trim borders
-  if (config.pretrimBorders) {
+  if (!needsProcessing) {
+    srcCanvas = img.bitmap as unknown as OffscreenCanvas;
+  } else if (config.pretrimBorders) {
     const raw = new OffscreenCanvas(img.width, img.height);
     const rctx = raw.getContext("2d")!;
     rctx.drawImage(img.bitmap, 0, 0);
@@ -186,20 +179,18 @@ async function prerenderImage(
   // Resize to block dimensions
   let blockCanvas: HTMLCanvasElement | OffscreenCanvas;
   if (faces.length > 0 && config.faceAwareCropping) {
-    const srcBitmap = await createImageBitmap(srcCanvas);
-    const cropped = smartFaceCrop(srcBitmap, faces, block.width, block.height);
+    const cropped = smartFaceCrop(srcCanvas, faces, block.width, block.height);
     blockCanvas =
       cropped ??
       smartResize(
-        srcBitmap,
+        srcCanvas,
         block.width,
         block.height,
         config.maintainAspectRatio,
       );
   } else {
-    const srcBitmap = await createImageBitmap(srcCanvas);
     blockCanvas = smartResize(
-      srcBitmap,
+      srcCanvas,
       block.width,
       block.height,
       config.maintainAspectRatio,
@@ -238,22 +229,16 @@ async function prerenderImage(
 async function compositeCollage(
   images: LoadedImage[],
   config: CollageConfig,
-  isPreview: boolean,
   onProgress?: (pct: number) => void,
 ): Promise<HTMLCanvasElement | OffscreenCanvas> {
   const canvasDims = effectiveDimensions(config);
-  const { w: canvasW, h: canvasH } = isPreview
-    ? previewDimensions(canvasDims.w, canvasDims.h)
-    : canvasDims;
+  const { w: canvasW, h: canvasH } = canvasDims;
 
-  // Clamp canvas size
   const canvas = makeCanvas(
     Math.max(1, Math.min(20000, canvasW)),
     Math.max(1, Math.min(20000, canvasH)),
-    isPreview,
   );
 
-  // Fill background
   const rgba = parseColorRGBA(config.backgroundColor);
   const hasAlpha = colorHasAlpha(config.backgroundColor);
   const ctx = canvas.getContext("2d")! as CanvasRenderingContext2D;
@@ -282,59 +267,19 @@ async function compositeCollage(
 
   const spacingPx = spacingPixels(canvas.width, canvas.height, config.spacing);
 
-  // Pre-load images if preview (downscale sources for speed)
-  const scaledImages = isPreview
-    ? await Promise.all(
-        images.map(async (img) => {
-          const MAX_PREVIEW = 1600;
-          const maxDim = Math.max(img.width, img.height);
-          if (maxDim <= MAX_PREVIEW) return img;
-          const s = MAX_PREVIEW / maxDim;
-          const scaled = new OffscreenCanvas(
-            Math.round(img.width * s),
-            Math.round(img.height * s),
-          );
-          const sc = scaled.getContext("2d")!;
-          sc.drawImage(img.bitmap, 0, 0, scaled.width, scaled.height);
-          const bitmap = await createImageBitmap(scaled);
-          return {
-            ...img,
-            bitmap,
-            width: scaled.width,
-            height: scaled.height,
-            aspect: scaled.width / scaled.height,
-          };
-        }),
-      )
-    : images;
-
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]!;
-    const srcImg = scaledImages[block.imageIndex] ?? scaledImages[0]!;
+    const srcImg = images[block.imageIndex] ?? images[0]!;
 
     onProgress?.(Math.round((i / blocks.length) * 90));
 
-    // We need the ImageBitmap for compositing
-    let imgBitmap: ImageBitmap;
-    if (isPreview) {
-      // For preview, use a quick center-crop resize (no face detection for speed)
-      const resized = smartResize(
-        srcImg.bitmap,
-        block.width,
-        block.height,
-        config.maintainAspectRatio,
-      );
-      imgBitmap = await createImageBitmap(resized);
-    } else {
-      imgBitmap = await prerenderImage(
-        srcImg,
-        block,
-        config,
-        spacingPx,
-        block.imageIndex,
-        isPreview,
-      );
-    }
+    const imgBitmap = await prerenderImage(
+      srcImg,
+      block,
+      config,
+      spacingPx,
+      block.imageIndex,
+    );
 
     if (config.applyShadow) {
       drawImageWithShadow(
@@ -357,6 +302,8 @@ async function compositeCollage(
       );
     }
 
+    imgBitmap.close();
+
     onProgress?.(Math.round(((i + 1) / blocks.length) * 100));
   }
 
@@ -373,7 +320,7 @@ export async function generateCollage(
   onProgress?: (pct: number) => void,
 ): Promise<HTMLCanvasElement | OffscreenCanvas> {
   _faceCache.clear();
-  return compositeCollage(images, config, false, onProgress);
+  return compositeCollage(images, config, onProgress);
 }
 
 /**
@@ -385,9 +332,92 @@ export async function generatePreview(
   config: CollageConfig,
   onProgress?: (pct: number) => void,
 ): Promise<HTMLCanvasElement> {
-  const result = await compositeCollage(images, config, true, onProgress);
-  // In preview mode, makeCanvas always returns HTMLCanvasElement
-  return result as HTMLCanvasElement;
+  const canvasDims = effectiveDimensions(config);
+  const { w: canvasW, h: canvasH } = previewDimensions(canvasDims.w, canvasDims.h);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.min(20000, canvasW));
+  canvas.height = Math.max(1, Math.min(20000, canvasH));
+
+  const ctx = canvas.getContext("2d")!;
+  const rgba = parseColorRGBA(config.backgroundColor);
+  const hasAlpha = colorHasAlpha(config.backgroundColor);
+  if (rgba.a === 0) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  } else {
+    if (rgba.a < 255 || hasAlpha) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    ctx.fillStyle = config.backgroundColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  const imageDims = images.map((img) => ({
+    width: img.width,
+    height: img.height,
+    aspect: img.width / img.height,
+  }));
+  const blocks =
+    config.layoutStyle === "masonry"
+      ? masonryPack(canvas.width, canvas.height, config.spacing, imageDims)
+      : gridPack(canvas.width, canvas.height, config.spacing, imageDims);
+  const spacingPx2 = spacingPixels(canvas.width, canvas.height, config.spacing);
+
+  const previewImages = await Promise.all(
+    images.map(async (img) => {
+      const MAX_PREVIEW = 1600;
+      const maxDim = Math.max(img.width, img.height);
+      if (maxDim <= MAX_PREVIEW) return img;
+      const s = MAX_PREVIEW / maxDim;
+      const scaled = new OffscreenCanvas(
+        Math.round(img.width * s),
+        Math.round(img.height * s),
+      );
+      const sc = scaled.getContext("2d")!;
+      sc.drawImage(img.bitmap, 0, 0, scaled.width, scaled.height);
+      const bitmap = await createImageBitmap(scaled);
+      return {
+        ...img,
+        bitmap,
+        width: scaled.width,
+        height: scaled.height,
+        aspect: scaled.width / scaled.height,
+      };
+    }),
+  );
+
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]!;
+    const srcImg = previewImages[block.imageIndex] ?? previewImages[0]!;
+    onProgress?.(Math.round((i / blocks.length) * 90));
+
+    const resized = smartResize(
+      srcImg.bitmap,
+      block.width,
+      block.height,
+      config.maintainAspectRatio,
+    );
+    const imgBitmap = await createImageBitmap(resized);
+
+    if (config.applyShadow) {
+      drawImageWithShadow(
+        ctx,
+        imgBitmap,
+        block.x,
+        block.y,
+        block.width,
+        block.height,
+        spacingPx2,
+      );
+    } else {
+      drawImageSimple(ctx, imgBitmap, block.x, block.y, block.width, block.height);
+    }
+
+    imgBitmap.close();
+    onProgress?.(Math.round(((i + 1) / blocks.length) * 100));
+  }
+
+  return canvas;
 }
 
 // Track face detections per image index to avoid re-detecting in preview mode
